@@ -1,0 +1,112 @@
+import numpy as np
+import yaml
+from scipy.optimize import curve_fit
+from datetime import datetime
+from meteostat import Point, Hourly
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Define the location (Edinburgh: 55.9533° N, 3.1883° W)
+location = Point(55.9533, -3.1883)
+start = datetime(2023, 1, 1, 0)  # Start time
+end = datetime(2023, 1, 2, 0)    # End time (24-hour period)
+
+# Fetch hourly temperature data
+data = Hourly(location, start, end)
+data = data.fetch()
+T_amb_list = data['temp'].tolist()
+
+# Open COP yaml file
+file_path1 = r'C:\Users\acer\Downloads\heat_pump_cop_synthetic_full (1).yaml'
+with open(file_path1, 'r') as file:
+    cop_yaml = yaml.safe_load(file)
+cop_temp = [i['outdoor_temp_C'] for i in cop_yaml['heat_pump_cop_data']]
+cop_cop = [i['COP_noisy'] for i in cop_yaml['heat_pump_cop_data']]
+
+class HeatSystem:
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
+        self.Aw = Aw
+        self.Uw = Uw
+        self.Ar = Ar
+        self.Ur = Ur
+        self.T_amb_list = T_amb_list
+        self.T_sp = T_sp
+        self.U_cond = U_cond
+        self.T_cond = T_cond
+        self.U_tank = U_tank
+        self.A_tank = A_tank
+        self.c_t = c_t
+        self.pump_on = True
+        self.a, self.b = self.fit_cop_curve()
+
+    def fit_cop_curve(self):
+        def cop(temp, a, b):
+            delta_T = 60 - np.array(temp)
+            return a + b / delta_T
+        popt, _ = curve_fit(cop, cop_temp, cop_cop)
+        return popt
+
+    def Q_load(self):
+        Q_loads = [
+            self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)
+            for Tamb in self.T_amb_list
+        ]
+        return Q_loads
+
+    def real_cop(self, temp):
+        return self.a + self.b / (temp - 60)
+
+    def Q_hp(self, T_tank):
+        if T_tank >= 60 + 273.15:
+            self.pump_on = False
+        elif T_tank <= 40 + 273.15:
+            self.pump_on = True
+
+        if self.pump_on:
+            return self.U_cond * (self.A_tank) * (self.T_cond - T_tank)
+        else:
+            return 0
+
+    def tank_temperature_ode(self, t, T_tank):
+        Q_hp = self.Q_hp(T_tank)
+        index = min(int(t / 86400 * len(self.T_amb_list)), len(self.T_amb_list) - 1)
+        T_amb = self.T_amb_list[index]
+        Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)
+        dTdt = (Q_hp - self.Q_load()[index] - Q_loss) / self.c_t
+        return dTdt
+
+    def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
+        t_eval = np.linspace(0, total_time, time_points)
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval)
+        return solution.t, solution.y[0]
+
+def main():
+    Aw = float(input("Enter wall area (Aw) in m^2: "))
+    Uw = float(input("Enter wall U-value (Uw) in W/m^2K: "))
+    Ar = float(input("Enter roof area (Ar) in m^2: "))
+    Ur = float(input("Enter roof U-value (Ur) in W/m^2K: "))
+    T_sp = float(input("Enter indoor setpoint temperature in K: "))
+    U_cond = float(input("Enter condenser overall heat transfer coefficient (U_cond) in W/m^2K: "))
+    T_cond = float(input("Enter condenser temperature (T_cond) in K: "))
+    U_tank = float(input("Enter tank heat loss coefficient (U_tank) in W/K: "))
+    A_tank = float(input("Enter tank heat transfer area (A_tank) in m^2: "))
+    c_t = float(input("Enter total thermal capacity of the tank (c_t) in J/K: "))
+
+    heat_system = HeatSystem(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+    initial_tank_temp = 45 + 273.15  # initial tank temperature in Kelvin
+    time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
+
+    # Plotting
+    plt.figure(figsize=(12, 6))
+    plt.plot(time_values / 3600, T_tank_values - 273.15)  # Convert K to °C for clarity
+    plt.axhline(y=60, color='r', linestyle='--', label="Heat Pump OFF (60°C)")
+    plt.axhline(y=40, color='b', linestyle='--', label="Heat Pump ON (40°C)")
+    plt.xlabel('Time (hours)')
+    plt.ylabel('Tank Temperature (°C)')
+    plt.title('Tank Temperature Over Time')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+if __name__ == "__main__":
+    main()
