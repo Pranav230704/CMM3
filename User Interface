@@ -1,3 +1,75 @@
+import numpy as np
+import yaml
+from scipy.optimize import curve_fit
+from datetime import datetime
+from meteostat import Point, Hourly
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import messagebox
+
+# Define the location (Edinburgh: 55.9533° N, 3.1883° W)
+location = Point(55.9533, -3.1883)
+start = datetime(2023, 1, 1, 0)
+end = datetime(2023, 1, 2, 0)
+data = Hourly(location, start, end).fetch()
+T_amb_list = data['temp'].tolist()
+
+# Load COP data from YAML file
+file_path1 = r'/Users/pranav/Downloads/heat_pump_cop_synthetic_full.yaml'
+with open(file_path1, 'r') as file:
+    cop_yaml = yaml.safe_load(file)
+
+cop_temp = [entry['outdoor_temp_C'] for entry in cop_yaml['heat_pump_cop_data']]
+cop_cop = [entry['COP_noisy'] for entry in cop_yaml['heat_pump_cop_data']]
+
+class HeatSystem:
+    def __init__(self, Aw, Uw, Ar, Ur, T_sp, T_amb_list, U_cond=300, T_cond=333.15, U_tank=5, c_t=837200):
+        self.Aw = Aw
+        self.Uw = Uw
+        self.Ar = Ar
+        self.Ur = Ur
+        self.T_sp = T_sp
+        self.T_amb_list = T_amb_list
+        self.U_cond = U_cond
+        self.T_cond = T_cond
+        self.U_tank = U_tank
+        self.c_t = c_t
+        self.pump_on = True
+
+    def Q_load(self):
+        return [self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp) for Tamb in self.T_amb_list]
+
+    def cop(self, temp, a, b):
+        delta_T = [60 - i for i in cop_temp]
+        return a + b / np.array(delta_T)
+
+    def calculate_cop(self):
+        try:
+            popt, _ = curve_fit(self.cop, cop_temp, cop_cop, p0=[1, 1])
+            return popt
+        except RuntimeError:
+            print("COP fitting failed.")
+            return None, None
+
+    def Q_hp(self, T_tank):
+        if T_tank >= 60 + 273.15:
+            self.pump_on = False
+        elif T_tank <= 45 + 273.15:
+            self.pump_on = True
+        return self.U_cond * (self.Aw + self.Uw) * (self.T_cond - T_tank) if self.pump_on else 0
+
+    def tank_temperature_ode(self, t, T_tank):
+        Q_hp = self.Q_hp(T_tank)
+        index = min(int(t / 86400 * len(self.T_amb_list)), len(self.T_amb_list) - 1)
+        Q_loss = self.U_tank * (T_tank - self.T_amb_list[index])
+        dTdt = (Q_hp - self.Q_load()[index] - Q_loss) / self.c_t
+        return dTdt
+
+    def solve_tank_temperature(self, initial_tank_temp=318.15, total_time=86400, time_points=1000):
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=np.linspace(0, total_time, time_points))
+        return solution.t, solution.y[0]
+
 def run_simulation(Aw, Uw, Ar, Ur, T_sp):
     heat_system = HeatSystem(Aw, Uw, Ar, Ur, T_sp, T_amb_list)
     initial_tank_temp = 318.15
