@@ -82,34 +82,60 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp):
     plt.grid(True)
     plt.show()
 
-def open_input_dialog(params):
-    root = tk.Tk()
-    root.withdraw()
-    
-    Aw = float(tk.simpledialog.askstring("Input", "Wall Area (Aw) in m²:", initialvalue=params["Aw"]))
-    Uw = float(tk.simpledialog.askstring("Input", "Wall U-value (Uw) in W/m²K:", initialvalue=params["Uw"]))
-    Ar = float(tk.simpledialog.askstring("Input", "Roof Area (Ar) in m²:", initialvalue=params["Ar"]))
-    Ur = float(tk.simpledialog.askstring("Input", "Roof U-value (Ur) in W/m²K:", initialvalue=params["Ur"]))
-    T_sp = float(tk.simpledialog.askstring("Input", "Indoor Setpoint Temp (T_sp) in K:", initialvalue=params["T_sp"]))
-    
-    root.destroy()  # Close the Tkinter root window
-    run_simulation(Aw, Uw, Ar, Ur, T_sp)
+def update_fields(entry_fields, params):
+    for field, value in params.items():
+        entry_fields[field].delete(0, tk.END)
+        entry_fields[field].insert(0, str(value))
 
-def open_settings_dialog():
-    options = {
+def open_gui():
+    root = tk.Tk()
+    root.title("Heat System Simulation")
+
+    settings = {
         "A": {"Aw": 90, "Uw": 0.3, "Ar": 80, "Ur": 0.15, "T_sp": 303.15},
         "B": {"Aw": 132, "Uw": 0.51, "Ar": 120, "Ur": 0.18, "T_sp": 293.15},
         "C": {"Aw": 180, "Uw": 0.7, "Ar": 160, "Ur": 0.21, "T_sp": 283.15}
     }
 
-    root = tk.Tk()
-    root.withdraw()
-    setting = tk.simpledialog.askstring("Choose Setting", "Enter A, B, or C for the desired setup:")
+    entry_fields = {}
 
-    if setting in options:
-        open_input_dialog(options[setting])
-    else:
-        messagebox.showerror("Error", "Invalid input. Please choose A, B, or C.")
+    def setup_entry(label_text, row, default_value):
+        label = tk.Label(root, text=label_text)
+        label.grid(row=row, column=0, sticky="w")
+        entry = tk.Entry(root)
+        entry.grid(row=row, column=1)
+        entry.insert(0, str(default_value))
+        return entry
+
+    # Create input fields for parameters
+    entry_fields["Aw"] = setup_entry("Wall Area (Aw) in m²:", 0, settings["A"]["Aw"])
+    entry_fields["Uw"] = setup_entry("Wall U-value (Uw) in W/m²K:", 1, settings["A"]["Uw"])
+    entry_fields["Ar"] = setup_entry("Roof Area (Ar) in m²:", 2, settings["A"]["Ar"])
+    entry_fields["Ur"] = setup_entry("Roof U-value (Ur) in W/m²K:", 3, settings["A"]["Ur"])
+    entry_fields["T_sp"] = setup_entry("Indoor Setpoint Temp (T_sp) in K:", 4, settings["A"]["T_sp"])
+
+    # Simulation button
+    def on_simulate():
+        try:
+            Aw = float(entry_fields["Aw"].get())
+            Uw = float(entry_fields["Uw"].get())
+            Ar = float(entry_fields["Ar"].get())
+            Ur = float(entry_fields["Ur"].get())
+            T_sp = float(entry_fields["T_sp"].get())
+            run_simulation(Aw, Uw, Ar, Ur, T_sp)
+        except ValueError:
+            messagebox.showerror("Error", "Please ensure all fields contain valid numbers.")
+
+    # Setting buttons A, B, C
+    def set_values(setting):
+        update_fields(entry_fields, settings[setting])
+
+    tk.Button(root, text="Simulate", command=on_simulate).grid(row=5, column=0, columnspan=2, pady=10)
+    tk.Button(root, text="Setting A", command=lambda: set_values("A")).grid(row=6, column=0)
+    tk.Button(root, text="Setting B", command=lambda: set_values("B")).grid(row=6, column=1)
+    tk.Button(root, text="Setting C", command=lambda: set_values("C")).grid(row=6, column=2)
+
+    root.mainloop()
 
 if __name__ == "__main__":
-    open_settings_dialog()
+    open_gui()
