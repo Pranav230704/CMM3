@@ -1,0 +1,43 @@
+def run_simulation(Aw, Uw, Ar, Ur, T_sp):
+    heat_system = HeatSystem(Aw, Uw, Ar, Ur, T_sp, T_amb_list)
+    initial_tank_temp = 318.15
+    time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
+    plt.figure(figsize=(12, 6))
+    plt.plot(time_values / 3600, T_tank_values - 273.15)
+    plt.xlabel('Time (hours)')
+    plt.ylabel('Tank Temperature (°C)')
+    plt.title('Tank Temperature Over Time')
+    plt.grid(True)
+    plt.show()
+
+def open_input_dialog(params):
+    root = tk.Tk()
+    root.withdraw()
+    
+    Aw = float(tk.simpledialog.askstring("Input", "Wall Area (Aw) in m²:", initialvalue=params["Aw"]))
+    Uw = float(tk.simpledialog.askstring("Input", "Wall U-value (Uw) in W/m²K:", initialvalue=params["Uw"]))
+    Ar = float(tk.simpledialog.askstring("Input", "Roof Area (Ar) in m²:", initialvalue=params["Ar"]))
+    Ur = float(tk.simpledialog.askstring("Input", "Roof U-value (Ur) in W/m²K:", initialvalue=params["Ur"]))
+    T_sp = float(tk.simpledialog.askstring("Input", "Indoor Setpoint Temp (T_sp) in K:", initialvalue=params["T_sp"]))
+    
+    root.destroy()  # Close the Tkinter root window
+    run_simulation(Aw, Uw, Ar, Ur, T_sp)
+
+def open_settings_dialog():
+    options = {
+        "A": {"Aw": 90, "Uw": 0.3, "Ar": 80, "Ur": 0.15, "T_sp": 303.15},
+        "B": {"Aw": 132, "Uw": 0.51, "Ar": 120, "Ur": 0.18, "T_sp": 293.15},
+        "C": {"Aw": 180, "Uw": 0.7, "Ar": 160, "Ur": 0.21, "T_sp": 283.15}
+    }
+
+    root = tk.Tk()
+    root.withdraw()
+    setting = tk.simpledialog.askstring("Choose Setting", "Enter A, B, or C for the desired setup:")
+
+    if setting in options:
+        open_input_dialog(options[setting])
+    else:
+        messagebox.showerror("Error", "Invalid input. Please choose A, B, or C.")
+
+if __name__ == "__main__":
+    open_settings_dialog()
