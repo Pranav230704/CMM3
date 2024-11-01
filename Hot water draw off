@@ -1,0 +1,59 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Parameters for DHW
+c_water = 4186  # Specific heat capacity of water in J/(kg°C)
+density_water = 1  # Density of water in kg/L (approximate)
+delta_T = 40  # Temperature rise needed for hot water in °C
+
+# Parameters for Space Heating
+Q_heating_constant = 5000  # Constant space heating load in watts (J/s) for simplicity
+
+# Time range (24 hours, 1-minute intervals)
+minutes = np.arange(0, 1440, 1)  # in minutes
+time_index = pd.date_range("2023-01-01", periods=len(minutes), freq="T")
+
+# Define intensity function for hot water usage pattern
+base_rate = 0.05  # baseline event rate per minute
+peak_params = [(8, 1), (19, 1)]  # (peak hour, intensity multiplier)
+
+def intensity(t, base_rate, peak_params):
+    rate = base_rate
+    for mu, amp in peak_params:
+        rate += amp * np.exp(-0.5 * ((t / 60 - mu) ** 2) / (1.5 ** 2))
+    return rate
+
+# Generate events based on time-dependent intensity
+np.random.seed(42)  # for reproducibility
+event_rate = intensity(minutes, base_rate, peak_params)
+events = np.random.poisson(event_rate)
+
+# Generate hot water usage for each event
+usage_volume_mu = 2  # average liters per event (log-normal scale)
+usage_volume_sigma = 0.5  # variability in usage volume (log-normal)
+usage_volumes = np.random.lognormal(usage_volume_mu, usage_volume_sigma, size=events.sum())
+
+# Create a time series for events
+event_times = np.repeat(time_index, events)
+usage_series = pd.Series(usage_volumes, index=event_times)
+
+# Calculate DHW load in J (energy) per interval
+Q_DHW_series = usage_series.resample("1H").sum() * density_water * c_water * delta_T
+
+# Define a constant space heating load over time
+Q_heating_series = pd.Series(Q_heating_constant * 3600, index=Q_DHW_series.index)  # J per hour
+
+# Calculate total load
+Q_load = Q_heating_series + Q_DHW_series
+
+# Plotting results
+plt.figure(figsize=(10, 5))
+plt.plot(Q_load.index, Q_load.values, label="Total Thermal Load (Q_load)")
+plt.plot(Q_heating_series.index, Q_heating_series.values, label="Space Heating Load (Q_heating)", linestyle="--")
+plt.plot(Q_DHW_series.index, Q_DHW_series.values, label="DHW Load (Q_DHW)", linestyle=":")
+plt.xlabel("Time of Day")
+plt.ylabel("Thermal Load (J)")
+plt.title("Simulated Total Thermal Load Including Space Heating and DHW")
+plt.legend()
+plt.show()
