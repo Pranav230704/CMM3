@@ -102,13 +102,36 @@ def set_parameters(params):
     Ur_entry.insert(0, params['Ur'])
     T_sp_entry.delete(0, tk.END)
     T_sp_entry.insert(0, params['T_sp'])
+    mass_of_water_entry.delete(0, tk.END)
+    mass_of_water_entry.insert(0, params['Mass of Water in Hot Water Tank in kg'])
+    
+    initial_tank_temp_entry.delete(0, tk.END)
+    initial_tank_temp_entry.insert(0, params['Initial Tank Temperature in K'])
+    
+    on_threshold_entry.delete(0, tk.END)
+    on_threshold_entry.insert(0, params['Heat Pump On Threshold in K'])
+    
+    off_threshold_entry.delete(0, tk.END)
+    off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
 
 # Create parameter buttons
 def create_parameter_buttons(frame):
     settings = {
-        'A': {'Aw': 90, 'Uw': 0.3, 'Ar': 80, 'Ur': 0.15, 'T_sp': 303.15},
-        'B': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15},
-        'C': {'Aw': 180, 'Uw': 0.75, 'Ar': 150, 'Ur': 0.25, 'T_sp': 280.15}
+        'A': {'Aw': 90, 'Uw': 0.3, 'Ar': 80, 'Ur': 0.15, 'T_sp': 303.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15},
+        'B': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15},
+        'C': {'Aw': 180, 'Uw': 0.75, 'Ar': 150, 'Ur': 0.25, 'T_sp': 280.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15}
     }
     for key, params in settings.items():
         tk.Button(frame, text=f"Parameters {key}", command=lambda p=params: set_parameters(p)).grid(pady=5, columnspan=2)
@@ -121,28 +144,82 @@ root.title("Heat Pump Simulation")
 frame_params = tk.Frame(root)
 frame_params.pack(padx=10, pady=10)
 
-tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=0, column=0)
+# Parameter Entry Labels and Fields
+tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=0, column=0, sticky='e')
 Aw_entry = tk.Entry(frame_params)
+Aw_entry.insert(0, "0")  # Starting value
 Aw_entry.grid(row=0, column=1)
 
-tk.Label(frame_params, text="Wall U-value in W/m²K (Uw):").grid(row=1, column=0)
+tk.Label(frame_params, text="Wall U-value in W/m²K (Uw):").grid(row=1, column=0, sticky='e')
 Uw_entry = tk.Entry(frame_params)
+Uw_entry.insert(0, "0")  # Starting value
 Uw_entry.grid(row=1, column=1)
 
-tk.Label(frame_params, text="Roof Area in m² (Ar):").grid(row=2, column=0)
+tk.Label(frame_params, text="Roof Area in m² (Ar):").grid(row=2, column=0, sticky='e')
 Ar_entry = tk.Entry(frame_params)
+Ar_entry.insert(0, "0")  # Starting value
 Ar_entry.grid(row=2, column=1)
 
-tk.Label(frame_params, text="Roof U-value in W/m²K (Ur):").grid(row=3, column=0)
+tk.Label(frame_params, text="Roof U-value in W/m²K (Ur):").grid(row=3, column=0, sticky='e')
 Ur_entry = tk.Entry(frame_params)
+Ur_entry.insert(0, "0")  # Starting value
 Ur_entry.grid(row=3, column=1)
 
-tk.Label(frame_params, text="Set Point Temperature in K (T_sp):").grid(row=4, column=0)
+tk.Label(frame_params, text="Set Point Temperature in K (T_sp):").grid(row=4, column=0, sticky='e')
 T_sp_entry = tk.Entry(frame_params)
+T_sp_entry.insert(0, "0")  # Starting value
 T_sp_entry.grid(row=4, column=1)
 
-# Create buttons for parameter sets A, B, C
-create_parameter_buttons(frame_params)
+
+tk.Label(frame_params, text="Mass of Water in Hot Water Tank in kg:").grid(row=5, column=0, sticky='e')
+mass_of_water_entry = tk.Entry(frame_params)
+mass_of_water_entry.insert(0, "0")  # Starting value
+mass_of_water_entry.grid(row=5, column=1)
+
+tk.Label(frame_params, text="Initial Tank Temperature in K:").grid(row=6, column=0, sticky='e')
+initial_tank_temp_entry = tk.Entry(frame_params)
+initial_tank_temp_entry.insert(0, "0")  # Starting value
+initial_tank_temp_entry.grid(row=6, column=1)
+
+tk.Label(frame_params, text="Heat Pump On Threshold in K:").grid(row=7, column=0, sticky='e')
+on_threshold_entry = tk.Entry(frame_params)
+on_threshold_entry.insert(0, "0")  # Starting value
+on_threshold_entry.grid(row=7, column=1)
+
+tk.Label(frame_params, text="Heat Pump Off Threshold in K:").grid(row=8, column=0, sticky='e')
+off_threshold_entry = tk.Entry(frame_params)
+off_threshold_entry.insert(0, "0")  # Starting value
+off_threshold_entry.grid(row=8, column=1)
+
+# Create buttons for parameter sets A, B, C in the next row
+param_button_frame = tk.Frame(frame_params)
+param_button_frame.grid(row=10, column=0, columnspan=2, pady=10)
+create_parameter_buttons(param_button_frame)
+
+# Function to reset parameter entries to 0
+def reset_parameters():
+    Aw_entry.delete(0, tk.END)
+    Aw_entry.insert(0, "0")
+    Uw_entry.delete(0, tk.END)
+    Uw_entry.insert(0, "0")
+    Ar_entry.delete(0, tk.END)
+    Ar_entry.insert(0, "0")
+    Ur_entry.delete(0, tk.END)
+    Ur_entry.insert(0, "0")
+    T_sp_entry.delete(0, tk.END)
+    T_sp_entry.insert(0, "0")
+    mass_of_water_entry.delete(0, tk.END)
+    mass_of_water_entry.insert(0, "0")
+    initial_tank_temp_entry.delete(0, tk.END)
+    initial_tank_temp_entry.insert(0, "0")
+    on_threshold_entry.delete(0, tk.END)
+    on_threshold_entry.insert(0, "0")
+    off_threshold_entry.delete(0, tk.END)
+    off_threshold_entry.insert(0, "0")
+
+
+# Add the Reset button to the Parameters frame
+tk.Button(frame_params, text="Reset to 0", command=reset_parameters).grid(row=9, column=0, columnspan=2, pady=10)
 
 # Frame for Performance Metrics
 frame_metrics = tk.Frame(root)
@@ -153,7 +230,7 @@ tk.Label(frame_metrics, text="Select Performance Metric:").pack()
 
 # Dropdown menu for performance metrics
 performance_metric_var = tk.StringVar(value="Select Metric")
-performance_metrics = ["Energy Consumption", "Coefficient of Performance", "Maximum Thermal Output", "Total System Efficiency"]
+performance_metrics = ["Energy Consumption", "Maximum Thermal Output", "Total System Efficiency"]
 metric_dropdown = ttk.Combobox(frame_metrics, textvariable=performance_metric_var, values=performance_metrics)
 metric_dropdown.pack(pady=5)
 
@@ -171,14 +248,6 @@ def show_performance_metric():
         plt.title("Energy Consumption Over Time")
         plt.xlabel("Time (h)")
         plt.ylabel("Energy (kWh)")
-    elif selected_metric == "Coefficient of Performance":
-        # Dummy data for demonstration, replace with actual calculations
-        time = np.linspace(0, 24, 100)
-        cop = np.cos(time) + 3  # Replace with actual COP data
-        plt.plot(time, cop)
-        plt.title("Coefficient of Performance Over Time")
-        plt.xlabel("Time (h)")
-        plt.ylabel("COP")
     elif selected_metric == "Maximum Thermal Output":
         # Dummy data for demonstration, replace with actual calculations
         time = np.linspace(0, 24, 100)
