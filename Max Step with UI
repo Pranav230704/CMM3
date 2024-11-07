@@ -47,8 +47,6 @@ def update_temperature():
     else:
         print(f"Failed to fetch temperature data for {selected_city}.")
     # You can further display or use this T_amb_list in the simulation as needed
-
-
 #open cop yaml file
 file_path1 = r'/Users/pranav/Downloads/heat_pump_cop_synthetic_full.yaml'
 with open(file_path1,'r') as file :
@@ -62,9 +60,11 @@ for i in cop_yaml['heat_pump_cop_data']:
     cop_temp.append(i['outdoor_temp_C'])
     cop_cop.append(i['COP_noisy'])
     
+#print(cop_cop)
+#rint(cop_temp)
 
 class Heat_System:
-    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t,):
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
         self.Aw = Aw
         self.Uw = Uw
         self.Ar = Ar
@@ -77,69 +77,59 @@ class Heat_System:
         self.A_tank = A_tank
         self.c_t = c_t
         self.pump_on = False
-        
-    
+
     def Q_load(self):
         Q_loads = []
         for i, Tamb in enumerate(self.T_amb_list):
-            #print(Tamb)
-            Q_load = (self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))*-1
+            Q_load = (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) * -1
             Q_loads.append(Q_load)
-    
         return Q_loads
-    
-    
+
+    def Q_hp(self, T_tank):
+        if T_tank[0] >= 60 + 273.15:
+            self.pump_on = False
+        elif T_tank[0] <= 40 + 273.15:
+            self.pump_on = True
+        if self.pump_on:
+            return self.U_cond * 1.11 * (self.T_cond - T_tank)
+        else:
+            return 0
+        
     def cop(self,temp,a,b):
         init_temp = 60
+        
         delta_T = [init_temp- i for i in cop_temp]
         return a + b/np.array(delta_T)
     popt, pcov = curve_fit(cop,cop_temp,cop_cop)
     a,b = popt[-2:]
     real_cop = []
     for i in range(len(T_amb_list)):
-        real_cop.append(a + b/(T_amb_list[i] - 60))
-        
-        
-    def Q_hp(self,T_tank):
-        if T_tank >= 60+273.15:
-            self.pump_on = False
-        elif T_tank <= 40+273.15:
-            self.pump_on = True
-        if self.pump_on:
-            #return  self.U_cond*(self.Aw + self.Ar)*(self.T_cond - T_tank)
-            return  self.U_cond*1.11*(self.T_cond - T_tank)
-        else:
-            return 0
+        real_cop.append(a + b/(T_amb_list[i] - 60))        
 
     def tank_temperature_ode(self, t, T_tank):
         Q_hp = self.Q_hp(T_tank)
-    
-    # Interpolate for Load and Ambient Temperature
         Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())
         T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)
-    
-    # Calculate heat loss with A_tank factored in
         Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)
-    
-    # Compute dT/dt
-        dTdt = (Q_hp - Load - Q_loss) / self.c_t
-        return dTdt
+        
+        if self.pump_on:
+            dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t
+            return dTdt
+        else:
+            # Handle the case when pump is off, e.g., return 0 or another equation as needed
+            return -Q_loss / self.c_t
 
-
-   # Solve_ivp 
     def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
-       # 时间点划分
+        # Time points for evaluation
         t_eval = np.linspace(0, total_time, time_points)
-       
-       # use solve_ivp to solve ode
-        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45")
-       
-       # get results
-        T_tank_values = solution.y[0] - 273.15 #tank temp
-        time_values = solution.t  # 时间点
-       
+        # Solve the ODE
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval, method="RK45", max_step=100)
+        # Convert the tank temperature from Kelvin to Celsius
+        T_tank_values = solution.y[0] - 273.15
+        time_values = solution.t
         return time_values, T_tank_values
 
+    
 # Inside your run_simulation function, pass T_amb_list after fetching it
 def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, display_type):
     # Ensure that T_amb_list is updated before passing it to the Heat_System
@@ -152,29 +142,21 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, di
     time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
     
     if display_type == 'Temperature':
-        plt.figure()
-        plt.plot(time_values / 3600, T_tank_values, label="Tank Temperature")
+        plt.figure(figsize=(10, 6))
+        plt.plot(time_values / 3600, T_tank_values, label="Tank Temperature", linewidth=1.5)
         plt.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
         plt.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
         plt.xlabel("Time (hours)")
         plt.ylabel("Tank Temperature (°C)")
         plt.title("Tank Temperature Over Time")
+        
+        # Adjust y-axis to provide extra space at the top
+        plt.ylim(min(T_tank_values) - 5, max(T_tank_values) + 5)
+        
+        # Place the legend in the top right corner within the plot area
+        plt.legend(loc="upper right")
+        
         plt.grid(True)
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Position legend outside the plot
-        plt.tight_layout()  # Adjust layout to fit everything nicely
-        plt.show()
-
-    
-    if display_type == 'Temperature':
-        plt.figure()
-        plt.plot(time_values / 3600, T_tank_values, label="Tank Temperature")
-        plt.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
-        plt.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
-        plt.xlabel("Time (hours)")
-        plt.ylabel("Tank Temperature (°C)")
-        plt.title("Tank Temperature Over Time")
-        plt.grid(True)
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Position legend outside the plot
         plt.tight_layout()  # Adjust layout to fit everything nicely
         plt.show()
 
