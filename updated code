@@ -1,31 +1,56 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Oct  9 11:25:14 2024
-
-@author: yisheng du
-"""
 import numpy as np
 import yaml
-from scipy.optimize import curve_fit
-from datetime import datetime
-from meteostat import Point, Hourly
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-# Define the location (Edinburgh: 55.9533° N, 3.1883° W)
-location = Point(55.9533, -3.1883)
-# Set the time period for data retrieval
-start = datetime(2023, 1, 1, 0) # Start time
-end = datetime(2023, 1, 2, 0) # End time (24-hour period)
-# Fetch hourly temperature data
-data = Hourly(location, start, end)
-data = data.fetch()
-#print(data)
+import tkinter as tk
+from tkinter import ttk
+from datetime import datetime
+from meteostat import Point, Hourly
+from scipy.optimize import curve_fit
 
-T_amb_list = data['temp'].tolist()
-#print(T_amb_list)
+# Define coordinates for additional cities
+cities = {
+    'Edinburgh': Point(55.9533, -3.1883),
+    'Oslo': Point(59.9139, 10.7522),
+    'Toronto': Point(43.65107, -79.347015),
+    'Nairobi': Point(-1.286389, 36.817223),
+    'Rio': Point(-22.9068, -43.1729),
+    'Cape Town': Point(-33.9249, 18.4241)
+}
+
+# Define T_amb_list as a global variable
+T_amb_list = []
+
+# Function to get temperature for selected city
+def get_temperature_for_city(city_name):
+    global T_amb_list  # Declare as global to update the global variable
+    location = cities.get(city_name)
+    if location:
+        # Set the time period for data retrieval
+        start = datetime(2023, 1, 1, 0)  # Start time
+        end = datetime(2023, 1, 2, 0)  # End time (24-hour period)
+        # Fetch hourly temperature data
+        data = Hourly(location, start, end)
+        data = data.fetch()
+        T_amb_list = data['temp'].tolist()
+        return T_amb_list
+    else:
+        return []
+
+# Function to update temperature based on selected city
+def update_temperature():
+    selected_city = city_var.get()
+    global T_amb_list  # Declare as global to use the updated list
+    T_amb_list = get_temperature_for_city(selected_city)
+    if T_amb_list:
+        print(f"Temperature data for {selected_city} fetched successfully!")
+    else:
+        print(f"Failed to fetch temperature data for {selected_city}.")
+    # You can further display or use this T_amb_list in the simulation as needed
+
 
 #open cop yaml file
-file_path1 = "C:\\Users\\Raymond M Rothschild\\Downloads\\heat_pump_cop_synthetic_full.yaml"
+file_path1 = r'/Users/pranav/Downloads/heat_pump_cop_synthetic_full.yaml'
 with open(file_path1,'r') as file :
     cop_yaml = yaml.safe_load(file)
 #print(cop_yaml)
@@ -37,11 +62,9 @@ for i in cop_yaml['heat_pump_cop_data']:
     cop_temp.append(i['outdoor_temp_C'])
     cop_cop.append(i['COP_noisy'])
     
-#print(cop_cop)
-#rint(cop_temp)
 
-class Heat_system:
-    def __init__(self,Aw,Uw,Ar,Ur,T_amb_list,T_sp,U_cond,T_cond,U_tank,A_tank,c_t):#M_water,Ini_tank_temp,pump_critemp,Q_loss,U_tank,A_tank
+class Heat_System:
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t,):
         self.Aw = Aw
         self.Uw = Uw
         self.Ar = Ar
@@ -54,16 +77,13 @@ class Heat_system:
         self.A_tank = A_tank
         self.c_t = c_t
         self.pump_on = False
-        #self.M_water = M_water
-        #self.Ini_tank_temp = Ini_tank_temp
-        #self.pump_critemp = pump_critemp
         
     
     def Q_load(self):
         Q_loads = []
         for i, Tamb in enumerate(self.T_amb_list):
             #print(Tamb)
-            Q_load = self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp)*-1
+            Q_load = (self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))*-1
             Q_loads.append(Q_load)
     
         return Q_loads
@@ -75,15 +95,10 @@ class Heat_system:
         return a + b/np.array(delta_T)
     popt, pcov = curve_fit(cop,cop_temp,cop_cop)
     a,b = popt[-2:]
-    print(a)
-    print(b)
     real_cop = []
     for i in range(len(T_amb_list)):
         real_cop.append(a + b/(T_amb_list[i] - 60))
         
-    print(real_cop)
-    plt.figure(figsize=(12, 6))
-    plt.plot(0,24, real_cop)
         
     def Q_hp(self,T_tank):
         if T_tank >= 60+273.15:
@@ -98,24 +113,18 @@ class Heat_system:
 
     def tank_temperature_ode(self, t, T_tank):
         Q_hp = self.Q_hp(T_tank)
-        
-        #index = int(t/3600)
-        Load = np.interp(t,np.linspace(0,86400,len(self.Q_load())),self.Q_load())
-        #T_amb = self.T_amb_list[index] 
-        T_amb = np.interp(t,np.linspace(0,86400,len(self.T_amb_list)),self.T_amb_list)
-        
+    
+    # Interpolate for Load and Ambient Temperature
+        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())
+        T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)
+    
+    # Calculate heat loss with A_tank factored in
         Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)
-        #Q_loss = self.U_tank * (T_tank - T_amb)
-        # return dT/dt
-        # print(t)
-        # if self.pump_on:
-        #     print("33333333333333")
-        #     print(Q_hp)
-        #     print(Load)
-        #     print(Q_loss[0])
-        dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t
-        #dTdt = (Q_hp - self.Q_load()[index] - Q_loss[0]) / self.c_t
+    
+    # Compute dT/dt
+        dTdt = (Q_hp - Load - Q_loss) / self.c_t
         return dTdt
+
 
    # Solve_ivp 
     def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
@@ -130,51 +139,253 @@ class Heat_system:
         time_values = solution.t  # 时间点
        
         return time_values, T_tank_values
-    
-def main():
-    #Aw = float(input("please enter wall area(Aw) in m^2:"))
-    #Uw = float(input("please enter wall U-value(Uw) in W/m^2:"))
-    #Ar = float(input("please enter roof area(Ar) in m^2:"))
-    #Ur = float(input("please enter roof U-value(Ur) in W/m^2:"))
-    #T_sp = float(input("please enter indoor setpoint temperature in K:"))
-    #U_cond = float(input("please enter condenser overall heat transfer coefficient (U_cond) in W/m^2K:"))
-    #T_cond = float(input("please enter condenser temperature (T_cond) in K:"))
-    #U_tank = float(input("please enter tank heat loss coefficient (U_tank) in W/K:"))
-    ##A_tank = float(input("please enter tank heat transfer area (A_tank) in m^2:"))
-    #c_t = float(input("please enter total thermal capacity of the tank (c_t) in J/K:"))
-    
-    Aw = 132 #float(input("please enter wall area(Aw) in m^2:"))
-    Uw =0.51 #float(input("please enter wall U-value(Uw) in W/m^2:"))
-    Ar = 120#float(input("please enter roof area(Ar) in m^2:"))
-    Ur = 0.18#float(input("please enter roof U-value(Ur) in W/m^2:"))
-    T_sp = 293.15#float(input("please enter indoor setpoint temperature in K:"))
-    U_cond = 300#float(input("please enter condenser overall heat transfer coefficient (U_cond) in W/m^2K:"))
-    T_cond = 343.15#float(input("please enter condenser temperature (T_cond) in K:"))
-    U_tank = 5#float(input("please enter tank heat loss coefficient (U_tank) in W/K:"))
-    A_tank = 1#(input("please enter tank heat transfer area (A_tank) in m^2:"))
-    c_t = 837200#float(input("please enter total thermal capacity of the tank (c_t) in J/K:"))
 
-    heat_system = Heat_system(Aw,Uw,Ar,Ur,T_amb_list,T_sp,U_cond,T_cond,U_tank,A_tank,c_t)
+# Inside your run_simulation function, pass T_amb_list after fetching it
+def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, display_type):
+    # Ensure that T_amb_list is updated before passing it to the Heat_System
+    if not T_amb_list:
+        print("Temperature data not available!")
+        return
     
-    # call out solve_ivp
-    initial_tank_temp = 45 + 273.15  # assume T_tank initinal 45°C
+    heat_system = Heat_System(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+    initial_tank_temp = 318.15  # Initial tank temperature in K
     time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
-    # print result
-    #print(f"Time (hours): {time_values / 3600}")
-    #print(f"Tank Temperature (K): {T_tank_values}")
     
-    # plt figure
-    plt.figure(figsize=(12, 6))
-    plt.plot(time_values / 3600, T_tank_values)
-    plt.axhline(y=40,color='b')
-    plt.axhline(y=60,color='r')
-    plt.xlabel('Time (hours)')
-    plt.ylabel('Tank Temperature (K)')
-    plt.title('Tank Temperature Over Time')
+    if display_type == 'Temperature':
+        plt.figure()
+        plt.plot(time_values / 3600, T_tank_values, label="Tank Temperature")
+        plt.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
+        plt.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
+        plt.xlabel("Time (hours)")
+        plt.ylabel("Tank Temperature (°C)")
+        plt.title("Tank Temperature Over Time")
+        plt.grid(True)
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Position legend outside the plot
+        plt.tight_layout()  # Adjust layout to fit everything nicely
+        plt.show()
+
+    
+    if display_type == 'Temperature':
+        plt.figure()
+        plt.plot(time_values / 3600, T_tank_values, label="Tank Temperature")
+        plt.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
+        plt.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
+        plt.xlabel("Time (hours)")
+        plt.ylabel("Tank Temperature (°C)")
+        plt.title("Tank Temperature Over Time")
+        plt.grid(True)
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Position legend outside the plot
+        plt.tight_layout()  # Adjust layout to fit everything nicely
+        plt.show()
+
+
+# Function to set parameters from buttons
+def set_parameters(params):
+
+    Aw_entry.delete(0, tk.END)
+    Aw_entry.insert(0, params['Aw'])
+    Uw_entry.delete(0, tk.END)
+    Uw_entry.insert(0, params['Uw'])
+    Ar_entry.delete(0, tk.END)
+    Ar_entry.insert(0, params['Ar'])
+    Ur_entry.delete(0, tk.END)
+    Ur_entry.insert(0, params['Ur'])
+    T_sp_entry.delete(0, tk.END)
+    T_sp_entry.insert(0, params['T_sp'])
+    mass_of_water_entry.delete(0, tk.END)
+    mass_of_water_entry.insert(0, params['Mass of Water in Hot Water Tank in kg'])
+    
+    initial_tank_temp_entry.delete(0, tk.END)
+    initial_tank_temp_entry.insert(0, params['Initial Tank Temperature in K'])
+    
+    on_threshold_entry.delete(0, tk.END)
+    on_threshold_entry.insert(0, params['Heat Pump On Threshold in K'])
+    
+    off_threshold_entry.delete(0, tk.END)
+    off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
+    
+    # Set the value for A_tank
+    A_tank_entry.delete(0, tk.END)
+    A_tank_entry.insert(0, params['Tank Surface Area in m² (A_tank)'])
+
+
+# Create parameter buttons
+def create_parameter_buttons(frame):
+    settings = {
+        'A': {'Aw': 90, 'Uw': 0.3, 'Ar': 80, 'Ur': 0.15, 'T_sp': 303.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15,
+              'Tank Surface Area in m² (A_tank)':1},
+        'B': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15,
+              'Tank Surface Area in m² (A_tank)':1},
+        'C': {'Aw': 180, 'Uw': 0.75, 'Ar': 150, 'Ur': 0.25, 'T_sp': 280.15,
+              'Mass of Water in Hot Water Tank in kg': 200, 
+              'Initial Tank Temperature in K': 200,
+              'Heat Pump On Threshold in K': 318.15, 
+              'Heat Pump Off Threshold in K': 333.15,
+              'Tank Surface Area in m² (A_tank)': 1}
+    }
+    for key, params in settings.items():
+        tk.Button(frame, text=f"Parameters {key}", command=lambda p=params: set_parameters(p)).grid(pady=5, columnspan=2)
+
+# Create main application window
+root = tk.Tk()
+root.title("Heat Pump Simulation")
+
+# Frame for Parameters
+frame_params = tk.Frame(root)
+frame_params.pack(padx=10, pady=10)
+
+# Parameter Entry Labels and Fields
+tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=0, column=0, sticky='e')
+Aw_entry = tk.Entry(frame_params)
+Aw_entry.insert(0, "0")  # Starting value
+Aw_entry.grid(row=0, column=1)
+
+tk.Label(frame_params, text="Wall U-value in W/m²K (Uw):").grid(row=1, column=0, sticky='e')
+Uw_entry = tk.Entry(frame_params)
+Uw_entry.insert(0, "0")  # Starting value
+Uw_entry.grid(row=1, column=1)
+
+tk.Label(frame_params, text="Roof Area in m² (Ar):").grid(row=2, column=0, sticky='e')
+Ar_entry = tk.Entry(frame_params)
+Ar_entry.insert(0, "0")  # Starting value
+Ar_entry.grid(row=2, column=1)
+
+tk.Label(frame_params, text="Roof U-value in W/m²K (Ur):").grid(row=3, column=0, sticky='e')
+Ur_entry = tk.Entry(frame_params)
+Ur_entry.insert(0, "0")  # Starting value
+Ur_entry.grid(row=3, column=1)
+
+tk.Label(frame_params, text="Set Point Temperature in K (T_sp):").grid(row=4, column=0, sticky='e')
+T_sp_entry = tk.Entry(frame_params)
+T_sp_entry.insert(0, "0")  # Starting value
+T_sp_entry.grid(row=4, column=1)
+
+tk.Label(frame_params, text="Tank Surface Area in m² (A_tank):").grid(row=5, column=0, sticky='e')
+A_tank_entry = tk.Entry(frame_params)
+A_tank_entry.insert(0, "0")  # Starting value
+A_tank_entry.grid(row=5, column=1)
+
+tk.Label(frame_params, text="Mass of Water in Hot Water Tank in kg:").grid(row=6, column=0, sticky='e')
+mass_of_water_entry = tk.Entry(frame_params)
+mass_of_water_entry.insert(0, "0")  # Starting value
+mass_of_water_entry.grid(row=6, column=1)
+
+tk.Label(frame_params, text="Initial Tank Temperature in K:").grid(row=7, column=0, sticky='e')
+initial_tank_temp_entry = tk.Entry(frame_params)
+initial_tank_temp_entry.insert(0, "0")  # Starting value
+initial_tank_temp_entry.grid(row=7, column=1)
+
+tk.Label(frame_params, text="Heat Pump On Threshold in K:").grid(row=8, column=0, sticky='e')
+on_threshold_entry = tk.Entry(frame_params)
+on_threshold_entry.insert(0, "0")  # Starting value
+on_threshold_entry.grid(row=8, column=1)
+
+tk.Label(frame_params, text="Heat Pump Off Threshold in K:").grid(row=9, column=0, sticky='e')
+off_threshold_entry = tk.Entry(frame_params)
+off_threshold_entry.insert(0, "0")  # Starting value
+off_threshold_entry.grid(row=9, column=1)
+
+# Add the city selection dropdown
+tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=10, column=0, sticky='e')
+city_var = tk.StringVar(value="Edinburgh")  # Default city is Edinburgh
+city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
+city_dropdown.grid(row=10, column=1)
+
+# Button to update temperature
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=11, column=0, columnspan=2, pady=10)
+
+# Create buttons for parameter sets A, B, C in the next row
+param_button_frame = tk.Frame(frame_params)
+param_button_frame.grid(row=12, column=0, columnspan=2, pady=10)
+create_parameter_buttons(param_button_frame)
+
+# Update the reset function to reset all parameters, including A_tank, to zero
+def reset_parameters():
+    entries = [Aw_entry, Uw_entry, Ar_entry, Ur_entry, T_sp_entry, mass_of_water_entry, 
+               initial_tank_temp_entry, on_threshold_entry, off_threshold_entry, A_tank_entry]
+    for entry in entries:
+        entry.delete(0, tk.END)
+        entry.insert(0, "0")
+
+# Add the Reset button to the Parameters frame
+tk.Button(frame_params, text="Reset to 0", command=reset_parameters).grid(row=13, column=0, columnspan=2, pady=10)
+
+# Frame for Performance Metrics
+frame_metrics = tk.Frame(root)
+frame_metrics.pack(padx=10, pady=10)
+
+# Create a section for performance metrics
+tk.Label(frame_metrics, text="Select Performance Metric:").pack()
+
+# Dropdown menu for performance metrics
+performance_metric_var = tk.StringVar(value="Select Metric")
+performance_metrics = ["Energy Consumption", "Maximum Thermal Output", "Total System Efficiency"]
+metric_dropdown = ttk.Combobox(frame_metrics, textvariable=performance_metric_var, values=performance_metrics)
+metric_dropdown.pack(pady=5)
+
+# Function to show selected performance metric
+def show_performance_metric():
+    selected_metric = performance_metric_var.get()
+    if selected_metric == "Select Metric":
+        return  # Do nothing if no metric is selected
+
+    plt.figure()
+    if selected_metric == "Energy Consumption":
+        # Dummy data for demonstration, replace with actual calculations
+        time = np.linspace(0, 24, 100)
+        energy = np.sin(time) + 1  # Replace with actual energy consumption data
+        plt.plot(time, energy)
+        plt.title("Energy Consumption Over Time")
+        plt.xlabel("Time (h)")
+        plt.ylabel("Energy (kWh)")
+    elif selected_metric == "Maximum Thermal Output":
+        # Dummy data for demonstration, replace with actual calculations
+        time = np.linspace(0, 24, 100)
+        thermal_output = np.random.uniform(0, 100, size=100)  # Replace with actual data
+        plt.plot(time, thermal_output)
+        plt.title("Maximum Thermal Output Over Time")
+        plt.xlabel("Time (h)")
+        plt.ylabel("Thermal Output (kW)")
+    elif selected_metric == "Total System Efficiency":
+        # Dummy data for demonstration, replace with actual calculations
+        time = np.linspace(0, 24, 100)
+        efficiency = np.random.uniform(0, 1, size=100)  # Replace with actual data
+        plt.plot(time, efficiency)
+        plt.title("Total System Efficiency Over Time")
+        plt.xlabel("Time (h)")
+        plt.ylabel("Efficiency")
+    
     plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    main()
- 
-   
+# Add button to show performance metric
+tk.Button(frame_metrics, text="Show Metric", command=show_performance_metric).pack(pady=10)
+
+# Frame for running simulation
+frame_simulation = tk.Frame(root)
+frame_simulation.pack(padx=10, pady=10)
+
+# Define default values for U_cond, T_cond, U_tank, c_t
+U_cond = 300
+T_cond = 343.15
+U_tank = 5
+c_t = 837200
+
+
+# Button to run simulation
+tk.Button(frame_simulation, text="Run Simulation", command=lambda: run_simulation(
+    float(Aw_entry.get()), float(Uw_entry.get()), float(Ar_entry.get()), float(Ur_entry.get()), 
+    float(T_sp_entry.get()), float(U_cond), float(T_cond), float(U_tank), float(A_tank_entry.get()), 
+    float(c_t), display_type='Temperature')).pack(pady=10)
+
+# Start the main loop
+root.mainloop()
