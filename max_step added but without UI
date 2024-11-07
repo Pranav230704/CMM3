@@ -120,7 +120,7 @@ class Heat_system:
         t_eval = np.linspace(0, total_time, time_points)
        
        # use solve_ivp to solve ode
-        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45",max_step = 1)
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45",max_step = 500)
        
        # get results
         T_tank_values = solution.y[0] - 273.15 #tank temp
