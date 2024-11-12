@@ -134,7 +134,6 @@ def main():
 
     # Print performance metrics
     print(f"Total Energy Consumption (Q_hp_total): {Q_hp_total} J")
-    #print(f"Average COP over time: {avg_cop}")
 
     # Plot Tank Temperature
     plt.figure(figsize=(12, 6))
