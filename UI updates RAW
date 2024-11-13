@@ -1,7 +1,48 @@
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
+from meteostat import Point, Hourly
 
-# Define the settings dictionary with all 11 parameters for each building type
+# Define coordinates for additional cities
+cities = {
+    'Edinburgh': Point(55.9533, -3.1883),
+    'Oslo': Point(59.9139, 10.7522),
+    'Toronto': Point(43.65107, -79.347015),
+    'Nairobi': Point(-1.286389, 36.817223),
+    'Rio': Point(-22.9068, -43.1729),
+    'Cape Town': Point(-33.9249, 18.4241)
+}
+
+# Define T_amb_list as a global variable
+T_amb_list = []
+
+# Function to get temperature for selected city
+def get_temperature_for_city(city_name):
+    global T_amb_list  # Declare as global to update the global variable
+    location = cities.get(city_name)
+    if location:
+        # Set the time period for data retrieval
+        start = datetime(2023, 1, 1, 0)  # Start time
+        end = datetime(2023, 1, 2, 0)  # End time (24-hour period)
+        # Fetch hourly temperature data
+        data = Hourly(location, start, end)
+        data = data.fetch()
+        T_amb_list = data['temp'].tolist()
+        return T_amb_list
+    else:
+        return []
+
+# Function to update temperature based on selected city
+def update_temperature():
+    selected_city = city_var.get()
+    global T_amb_list  # Declare as global to use the updated list
+    T_amb_list = get_temperature_for_city(selected_city)
+    if T_amb_list:
+        print(f"Temperature data for {selected_city} fetched successfully!")
+    else:
+        print(f"Failed to fetch temperature data for {selected_city}.")
+
+# Settings for building types
 settings = {
     'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
           'A_tank': 1, 'mass_of_water': 200, 'initial_tank_temp': 200,
@@ -21,7 +62,26 @@ root = tk.Tk()
 root.title("Heat Pump Simulation")
 root.geometry("900x600")
 
-# Create and configure frames for parameter categories
+# Frame for User Manual with Show/Hide functionality
+def toggle_manual():
+    if manual_text.winfo_ismapped():
+        manual_text.pack_forget()
+    else:
+        manual_text.pack()
+
+manual_button = tk.Button(root, text="Show/Hide User Manual", command=toggle_manual)
+manual_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+manual_text = tk.Text(root, height=20, width=40, wrap=tk.WORD, relief=tk.SUNKEN, borderwidth=2)
+manual_text.insert(tk.END, """Heat Pump Simulation User Manual:
+1) Select a preset building type to load parameters or adjust inputs manually.
+2) Use "Update Temperature" to fetch outside temperature for the selected city.
+3) Run the simulation to analyze tank temperature and performance metrics.
+4) Use "Select Metric" to view specific performance data.
+""")
+manual_text.config(state=tk.DISABLED)
+
+# Frame for Parameters
 frame_params = tk.Frame(root)
 frame_params.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
 
@@ -35,6 +95,7 @@ tank_params_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 control_params_frame = tk.LabelFrame(frame_params, text="Simulation Control", padx=10, pady=10)
 control_params_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
 
+# Define parameter entries
 # Building Parameters
 tk.Label(building_params_frame, text="Wall Area (m²):").grid(row=0, column=0, sticky='e')
 Aw_entry = tk.Entry(building_params_frame, width=20)
@@ -90,8 +151,11 @@ off_threshold_entry.grid(row=2, column=1)
 
 tk.Label(control_params_frame, text="Select City:").grid(row=3, column=0, sticky='e')
 city_var = tk.StringVar(value="Edinburgh")
-city_dropdown = ttk.Combobox(control_params_frame, textvariable=city_var, values=list(settings['A']['City']))
+city_dropdown = ttk.Combobox(control_params_frame, textvariable=city_var, values=list(cities.keys()))
 city_dropdown.grid(row=3, column=1)
+
+# Button to update temperature
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=11, column=0, columnspan=2, pady=10)
 
 # Function to set parameters from the dropdown menu
 def set_parameters(params):
@@ -115,7 +179,7 @@ def set_parameters(params):
     on_threshold_entry.insert(0, params['on_threshold'])
     off_threshold_entry.delete(0, tk.END)
     off_threshold_entry.insert(0, params['off_threshold'])
-    city_var.set(params['City'])
+    city_var.set(params['City'])  # Update city selection
 
 # Dropdown for selecting building type
 def create_parameter_dropdown(frame):
@@ -134,5 +198,5 @@ param_dropdown_frame = tk.Frame(frame_params)
 param_dropdown_frame.grid(row=3, column=0, columnspan=2, pady=10)
 create_parameter_dropdown(param_dropdown_frame)
 
-# Run the main UI loop
+# Start the main loop
 root.mainloop()
