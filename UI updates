@@ -144,6 +144,9 @@ class Heat_system:
 
         return time_values, T_tank_values, Q_hp_total, avg_cop
 
+root = tk.Tk()
+root.title("Heat Pump Simulation")
+
 # Frame for Plot Display
 frame_plots = tk.Frame(root)
 frame_plots.pack(padx=10, pady=10)
@@ -228,8 +231,7 @@ settings = {
           'Tank Surface Area in m² (A_tank)':1, 'City': 'Edinburgh', 'Outside Temp': 0},
 }
 
-root = tk.Tk()
-root.title("Heat Pump Simulation")
+
 
 # Add user manual as a text widget in a frame
 def create_user_manual():
@@ -509,11 +511,37 @@ U_tank = 5
 c_t = 837200
 
 
-# Button to run simulation
-tk.Button(frame_simulation, text="Run Simulation", command=lambda: run_simulation(
+# Create a single main frame to contain everything
+frame_main = tk.Frame(root)
+frame_main.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+# Frame for Parameters
+frame_params = tk.Frame(frame_main)
+frame_params.pack(fill=tk.BOTH, padx=10, pady=10)
+
+# Frame for Plots
+frame_plots = tk.Frame(frame_main)
+frame_plots.pack(padx=10, pady=10)
+
+# Separate frames for each plot within the frame_plots
+tank_temp_frame = tk.Frame(frame_plots)
+tank_temp_frame.pack(side=tk.LEFT, padx=10, pady=10)
+cop_frame = tk.Frame(frame_plots)
+cop_frame.pack(side=tk.LEFT, padx=10, pady=10)
+
+# Frame for Controls (like buttons to run simulation and show metrics)
+frame_controls = tk.Frame(frame_main)
+frame_controls.pack(padx=10, pady=10)
+
+# Pack the parameter input fields, run button, and metric display dropdowns into their respective frames within frame_main
+
+# Add a button to run simulation within the controls frame
+tk.Button(frame_controls, text="Run Simulation", command=lambda: run_simulation(
     float(Aw_entry.get()), float(Uw_entry.get()), float(Ar_entry.get()), float(Ur_entry.get()), 
     float(T_sp_entry.get()), float(U_cond), float(T_cond), float(U_tank), float(A_tank_entry.get()), 
     float(c_t), display_type='Temperature')).pack(pady=10)
+
+# Organize all elements to be displayed within frame_main
 
 # Start the main loop
 root.mainloop()
