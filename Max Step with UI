@@ -63,7 +63,7 @@ for i in cop_yaml['heat_pump_cop_data']:
 #print(cop_cop)
 #rint(cop_temp)
 
-class Heat_System:
+class Heat_system:
     def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
         self.Aw = Aw
         self.Uw = Uw
@@ -77,57 +77,69 @@ class Heat_System:
         self.A_tank = A_tank
         self.c_t = c_t
         self.pump_on = False
+        self.real_cop = []  # Store calculated COP values for averaging
+        self.cop_values = []  # Store COP values at t_eval points
 
     def Q_load(self):
         Q_loads = []
-        for i, Tamb in enumerate(self.T_amb_list):
+        for Tamb in self.T_amb_list:
             Q_load = (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) * -1
             Q_loads.append(Q_load)
         return Q_loads
 
-    def Q_hp(self, T_tank):
-        if T_tank[0] >= 60 + 273.15:
+    # COP function based on curve fitting
+    def cop(self, T_amb, a, b):
+        delta_T = 60 - T_amb
+        return a + b / delta_T
+
+    # Fit COP parameters using the provided data once
+    popt, pcov = curve_fit(lambda T, a, b: a + b / (60 - T), cop_temp, cop_cop)
+    a, b = popt  # Obtained parameters for COP calculation
+
+    def Q_hp(self, T_tank, T_amb):
+        if T_tank >= 60 + 273.15:
             self.pump_on = False
-        elif T_tank[0] <= 40 + 273.15:
+        elif T_tank <= 40 + 273.15:
             self.pump_on = True
+
         if self.pump_on:
-            return self.U_cond * 1.11 * (self.T_cond - T_tank)
+            
+            return 1.11 * (self.U_cond * (self.T_cond - T_tank))
         else:
             return 0
-        
-    def cop(self,temp,a,b):
-        init_temp = 60
-        
-        delta_T = [init_temp- i for i in cop_temp]
-        return a + b/np.array(delta_T)
-    popt, pcov = curve_fit(cop,cop_temp,cop_cop)
-    a,b = popt[-2:]
-    real_cop = []
-    for i in range(len(T_amb_list)):
-        real_cop.append(a + b/(T_amb_list[i] - 60))        
 
     def tank_temperature_ode(self, t, T_tank):
-        Q_hp = self.Q_hp(T_tank)
-        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())
         T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)
+        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())
+        Q_hp = self.Q_hp(T_tank, T_amb)
         Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)
         
-        if self.pump_on:
-            dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t
-            return dTdt
-        else:
-            # Handle the case when pump is off, e.g., return 0 or another equation as needed
-            return -Q_loss / self.c_t
+        dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t
+        return dTdt
 
     def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
-        # Time points for evaluation
         t_eval = np.linspace(0, total_time, time_points)
-        # Solve the ODE
+        
+        # Interpolate T_amb_list to match the evaluation points
+        T_amb_interpolated = np.interp(t_eval, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)
+
+        # Solve ODE at specified evaluation points
         solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval, method="RK45", max_step=100)
-        # Convert the tank temperature from Kelvin to Celsius
-        T_tank_values = solution.y[0] - 273.15
+
+        # Calculate COP at each t_eval point based on T_amb
+        self.cop_values = [self.cop(T_amb, self.a, self.b) for T_amb in T_amb_interpolated]
+
+        # Calculate total energy consumption
+        Q_hp_values = [self.Q_hp(T_tank, T_amb) for T_tank, T_amb in zip(solution.y[0], T_amb_interpolated)]
+        Q_hp_total = np.trapz(Q_hp_values, solution.t)  # Total energy consumption
+        
+        # Calculate average COP
+        avg_cop = np.mean(self.real_cop) if self.real_cop else 0  # Average COP
+
+        T_tank_values = solution.y[0] - 273.15  # Convert tank temperature to Celsius
         time_values = solution.t
-        return time_values, T_tank_values
+
+        return time_values, T_tank_values, Q_hp_total, avg_cop
 
     
 # Inside your run_simulation function, pass T_amb_list after fetching it
@@ -137,9 +149,9 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, di
         print("Temperature data not available!")
         return
     
-    heat_system = Heat_System(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
     initial_tank_temp = 318.15  # Initial tank temperature in K
-    time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
+    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
     
     if display_type == 'Temperature':
         plt.figure(figsize=(10, 6))
@@ -159,11 +171,119 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, di
         plt.grid(True)
         plt.tight_layout()  # Adjust layout to fit everything nicely
         plt.show()
+        
+    elif display_type == 'COP over Time':
+        plt.figure(figsize=(12, 6))
+        plt.plot(time_values / 3600, heat_system.cop_values, label='COP', color='purple')
+        plt.xlabel('Time (hours)')
+        plt.ylabel('COP')
+        plt.title('Coefficient of Performance (COP) Over Time')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        
+    elif display_type == 'Total Energy Consumption':
+        print("")
+        
+        
+# Update the settings dictionary to include a placeholder for the outside temperature (T_amb)
+settings = {
+    'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
+          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Initial Tank Temperature in K': 200,
+          'Heat Pump On Threshold in K': 318.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)':1, 'City': 'Oslo', 'Outside Temp': 0},  # 'Outside Temp' placeholder
+    'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
+          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Initial Tank Temperature in K': 200,
+          'Heat Pump On Threshold in K': 318.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)':1, 'City': 'Cape Town', 'Outside Temp': 0},
+    'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
+          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Initial Tank Temperature in K': 200,
+          'Heat Pump On Threshold in K': 318.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
+    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Initial Tank Temperature in K': 200,
+          'Heat Pump On Threshold in K': 318.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)':1, 'City': 'Edinburgh', 'Outside Temp': 0},
+}
+
+root = tk.Tk()
+root.title("Heat Pump Simulation")
+
+# Add user manual as a text widget in a frame
+def create_user_manual():
+    user_manual = """
+    Heat Pump Simulation User Manual
+
+    This tool allows you to model and analyze the behavior of a heat pump system based on various parameters. Below is a step-by-step guide to help you get started.
+
+1)  Select one of the preset buildings (via the dropdown menu) to set the appropriate system parameters:
+    
+    Building A: a well-insulated, smaller home.
+    Building B: a moderately insulated, medium-sized home.
+    Building C: a poorly-insulated, larger house.
+    Building D: the default building given in the ‘input.yaml’ file.
+    
+    This will select all the inputs.
+    You will know if the inputs have been selected successfully as it will state in the spyder kernal 'Temperature data for city has been fetched successfully'
+    
+2) Edit the parameters to suit your own inputs, if you wish to change the outside tempearture input you must click update temperature in order to update it (optional).
+
+3) Click the run simulation button which will run the inputs using the code and output the results on our spyder code.
+
+   (If you wish to view the performance metrics)
+    
+4) Select the performance metrics dropdown menu. 
+
+5) Select the inputs you would like to view for the metric.
+    
+6) Click show metric.
+    
+7) View the metric graph on spyder.
+    """
+    manual_frame = tk.Frame(root)
+    manual_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=20)
+
+    manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 14, "bold"))
+    manual_label.pack()
+
+    manual_text = tk.Text(manual_frame, height=20, width=50, wrap=tk.WORD)
+    manual_text.insert(tk.END, user_manual)
+    manual_text.config(state=tk.DISABLED)  # Make the text widget read-only
+    manual_text.pack()
+
+# Create and display the user manual
+create_user_manual()
 
 
-# Function to set parameters from buttons
+# Frame for Parameters
+frame_params = tk.Frame(root)
+frame_params.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+
+# Function to update the temperature based on selected city
+def update_temperature_display(city_name):
+    global T_amb_list  # Global variable to hold the temperature data
+    # Fetch temperature data for the selected city
+    T_amb_list = get_temperature_for_city(city_name)
+    if T_amb_list:
+        print(f"Temperature data for {city_name} fetched successfully!")
+        # Set the first temperature value as the current outside temperature for display
+        current_temp = T_amb_list[0]  # Assuming we're showing the first value for now
+        return current_temp
+    else:
+        print(f"Failed to fetch temperature data for {city_name}.")
+        return 0
+
+# Modify the set_parameters function to also set the 'Outside Temp' value
 def set_parameters(params):
-
     Aw_entry.delete(0, tk.END)
     Aw_entry.insert(0, params['Aw'])
     Uw_entry.delete(0, tk.END)
@@ -186,43 +306,37 @@ def set_parameters(params):
     off_threshold_entry.delete(0, tk.END)
     off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
     
-    # Set the value for A_tank
     A_tank_entry.delete(0, tk.END)
     A_tank_entry.insert(0, params['Tank Surface Area in m² (A_tank)'])
+    
+    # Set the City value (for use in fetching outside temperature)
+    city_var.set(params['City'])
+    
+    # Fetch and display outside temperature for the city
+    outside_temp = update_temperature_display(params['City'])
+    # Update the outside temperature entry field
+    outside_temp_entry.delete(0, tk.END)
+    outside_temp_entry.insert(0, outside_temp)
 
+# Create a new entry for displaying outside temperature
+outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
+outside_temp_label.grid(row=6, column=0, sticky='e')
+outside_temp_entry = tk.Entry(frame_params)
+outside_temp_entry.insert(0, "0")  # Default value
+outside_temp_entry.grid(row=6, column=1)
 
-# Create parameter buttons
-def create_parameter_buttons(frame):
-    settings = {
-        'A': {'Aw': 90, 'Uw': 0.3, 'Ar': 80, 'Ur': 0.15, 'T_sp': 303.15,
-              'Mass of Water in Hot Water Tank in kg': 200, 
-              'Initial Tank Temperature in K': 200,
-              'Heat Pump On Threshold in K': 318.15, 
-              'Heat Pump Off Threshold in K': 333.15,
-              'Tank Surface Area in m² (A_tank)':1},
-        'B': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
-              'Mass of Water in Hot Water Tank in kg': 200, 
-              'Initial Tank Temperature in K': 200,
-              'Heat Pump On Threshold in K': 318.15, 
-              'Heat Pump Off Threshold in K': 333.15,
-              'Tank Surface Area in m² (A_tank)':1},
-        'C': {'Aw': 180, 'Uw': 0.75, 'Ar': 150, 'Ur': 0.25, 'T_sp': 280.15,
-              'Mass of Water in Hot Water Tank in kg': 200, 
-              'Initial Tank Temperature in K': 200,
-              'Heat Pump On Threshold in K': 318.15, 
-              'Heat Pump Off Threshold in K': 333.15,
-              'Tank Surface Area in m² (A_tank)': 1}
-    }
-    for key, params in settings.items():
-        tk.Button(frame, text=f"Parameters {key}", command=lambda p=params: set_parameters(p)).grid(pady=5, columnspan=2)
+# Modify the dropdown to include the city and temperature update
+def create_parameter_dropdown(frame):
+    dropdown = ttk.Combobox(frame, values=list(settings.keys()))
+    dropdown.grid(pady=5, columnspan=2)
 
-# Create main application window
-root = tk.Tk()
-root.title("Heat Pump Simulation")
+    def on_dropdown_select(event):
+        selected_option = dropdown.get()
+        if selected_option in settings:
+            params = settings[selected_option]
+            set_parameters(params)
 
-# Frame for Parameters
-frame_params = tk.Frame(root)
-frame_params.pack(padx=10, pady=10)
+    dropdown.bind("<<ComboboxSelected>>", on_dropdown_select)
 
 # Parameter Entry Labels and Fields
 tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=0, column=0, sticky='e')
@@ -284,10 +398,10 @@ city_dropdown.grid(row=10, column=1)
 # Button to update temperature
 tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=11, column=0, columnspan=2, pady=10)
 
-# Create buttons for parameter sets A, B, C in the next row
-param_button_frame = tk.Frame(frame_params)
-param_button_frame.grid(row=12, column=0, columnspan=2, pady=10)
-create_parameter_buttons(param_button_frame)
+# Create buttons for parameter sets A, B, C, D in the next row
+param_dropdown_frame = tk.Frame(frame_params)
+param_dropdown_frame.grid(row=12, column=0, columnspan=2, pady=10)
+create_parameter_dropdown(param_dropdown_frame)
 
 # Update the reset function to reset all parameters, including A_tank, to zero
 def reset_parameters():
@@ -309,42 +423,37 @@ tk.Label(frame_metrics, text="Select Performance Metric:").pack()
 
 # Dropdown menu for performance metrics
 performance_metric_var = tk.StringVar(value="Select Metric")
-performance_metrics = ["Energy Consumption", "Maximum Thermal Output", "Total System Efficiency"]
+performance_metrics = ["Total Energy Consumption", "Average COP"]
 metric_dropdown = ttk.Combobox(frame_metrics, textvariable=performance_metric_var, values=performance_metrics)
 metric_dropdown.pack(pady=5)
 
 # Function to show selected performance metric
 def show_performance_metric():
+    
     selected_metric = performance_metric_var.get()
     if selected_metric == "Select Metric":
         return  # Do nothing if no metric is selected
 
     plt.figure()
-    if selected_metric == "Energy Consumption":
+    if selected_metric == "Total Energy Consumption":
         # Dummy data for demonstration, replace with actual calculations
         time = np.linspace(0, 24, 100)
         energy = np.sin(time) + 1  # Replace with actual energy consumption data
         plt.plot(time, energy)
         plt.title("Energy Consumption Over Time")
-        plt.xlabel("Time (h)")
         plt.ylabel("Energy (kWh)")
-    elif selected_metric == "Maximum Thermal Output":
+
+        
+    elif selected_metric == "Average COP":
         # Dummy data for demonstration, replace with actual calculations
-        time = np.linspace(0, 24, 100)
-        thermal_output = np.random.uniform(0, 100, size=100)  # Replace with actual data
-        plt.plot(time, thermal_output)
-        plt.title("Maximum Thermal Output Over Time")
-        plt.xlabel("Time (h)")
-        plt.ylabel("Thermal Output (kW)")
-    elif selected_metric == "Total System Efficiency":
-        # Dummy data for demonstration, replace with actual calculations
-        time = np.linspace(0, 24, 100)
-        efficiency = np.random.uniform(0, 1, size=100)  # Replace with actual data
-        plt.plot(time, efficiency)
-        plt.title("Total System Efficiency Over Time")
-        plt.xlabel("Time (h)")
-        plt.ylabel("Efficiency")
-    
+        # Plot COP over Time
+        plt.figure(figsize=(12, 6))
+        plt.plot(24, Heat_system.avg_cop, label='COP', color='purple')
+        plt.xlabel('Time (hours)')
+        plt.ylabel('COP')
+        plt.title('Coefficient of Performance (COP) Over Time')
+        plt.legend()
+            
     plt.grid(True)
     plt.tight_layout()
     plt.show()
