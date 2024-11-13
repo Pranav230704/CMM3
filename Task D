@@ -166,7 +166,7 @@ def main():
         t_eval3.append(float(item))
 
     plt.figure(figsize=(12, 6))
-    plt.plot(t_eval3 ,Q_hp_list)
+    plt.plot(np.array(t_eval3)/3600 ,Q_hp_list)
     #plt.plot(t_eval3 ,Load_list)
     #plt.plot(t_eval3 ,Q_loss_list)
 
