@@ -1,31 +1,31 @@
-# Create a single main frame to contain everything
+# Create the main frame
 frame_main = tk.Frame(root)
 frame_main.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
 # Frame for Parameters
 frame_params = tk.Frame(frame_main)
-frame_params.pack(fill=tk.BOTH, padx=10, pady=10)
+frame_params.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-# Frame for Plots
+# Frame for Plots (Grid layout allows placing it next to or below other frames)
 frame_plots = tk.Frame(frame_main)
-frame_plots.pack(padx=10, pady=10)
+frame_plots.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
 
-# Separate frames for each plot within the frame_plots
-tank_temp_frame = tk.Frame(frame_plots)
-tank_temp_frame.pack(side=tk.LEFT, padx=10, pady=10)
-cop_frame = tk.Frame(frame_plots)
-cop_frame.pack(side=tk.LEFT, padx=10, pady=10)
-
-# Frame for Controls (like buttons to run simulation and show metrics)
+# Frame for Controls (like buttons to run simulation)
 frame_controls = tk.Frame(frame_main)
-frame_controls.pack(padx=10, pady=10)
+frame_controls.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
 
-# Pack the parameter input fields, run button, and metric display dropdowns into their respective frames within frame_main
+# Inside frame_plots, create sub-frames for each plot
+tank_temp_frame = tk.Frame(frame_plots)
+tank_temp_frame.grid(row=0, column=0, padx=10, pady=10)
+cop_frame = tk.Frame(frame_plots)
+cop_frame.grid(row=0, column=1, padx=10, pady=10)
 
-# Add a button to run simulation within the controls frame
+# Run Simulation button within the controls frame
 tk.Button(frame_controls, text="Run Simulation", command=lambda: run_simulation(
     float(Aw_entry.get()), float(Uw_entry.get()), float(Ar_entry.get()), float(Ur_entry.get()), 
     float(T_sp_entry.get()), float(U_cond), float(T_cond), float(U_tank), float(A_tank_entry.get()), 
     float(c_t), display_type='Temperature')).pack(pady=10)
 
-# Organize all elements to be displayed within frame_main
+# Adjust root grid to allow resizing of frames
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
