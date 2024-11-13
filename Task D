@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov  5 13:36:02 2024
+Created on Wed Oct  9 11:25:14 2024
 
 @author: Raymond M Rothschild
 """
-
 import numpy as np
 import yaml
 from scipy.optimize import curve_fit
@@ -41,9 +40,6 @@ for i in cop_yaml['heat_pump_cop_data']:
 #print(cop_cop)
 #rint(cop_temp)
 
-Q_hp_list = []
-Load_list = []
-Q_loss_list = []
 class Heat_system:
     def __init__(self,Aw,Uw,Ar,Ur,T_amb_list,T_sp,U_cond,T_cond,U_tank,A_tank,c_t):#M_water,Ini_tank_temp,pump_critemp,Q_loss,U_tank,A_tank
         self.Aw = Aw
@@ -73,7 +69,7 @@ class Heat_system:
             else:
                 Q_load = -1*(self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))
                 
-            #Q_load = -1*(self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))#run this to get the original    
+            # Q_load = -1*(self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))    
             #print("i",i)
             Q_loads.append(Q_load)
     
@@ -82,17 +78,18 @@ class Heat_system:
     
     def cop(self,temp,a,b):
         init_temp = 60
+        
         delta_T = [init_temp- i for i in cop_temp]
         return a + b/np.array(delta_T)
     popt, pcov = curve_fit(cop,cop_temp,cop_cop)
     a,b = popt[-2:]
-    #print(a)
-    #print(b)
+    print(a)
+    print(b)
     real_cop = []
     for i in range(len(T_amb_list)):
         real_cop.append(a + b/(T_amb_list[i] - 60))
         
-    #print(real_cop)
+    
         
     def Q_hp(self,T_tank):
         if T_tank >= 60+273.15:
@@ -107,41 +104,52 @@ class Heat_system:
 
     def tank_temperature_ode(self, t, T_tank):
         Q_hp = self.Q_hp(T_tank)
-        Q_hp_list.append(float(Q_hp))
-        # 确保t的索引不超过T_amb_list的范围
+        
         #index = int(t/3600)
         Load = np.interp(t,np.linspace(0,86400,len(self.Q_load())),self.Q_load())
-        Load_list.append(float(Load))
-
         #T_amb = self.T_amb_list[index] 
         T_amb = np.interp(t,np.linspace(0,86400,len(self.T_amb_list)),self.T_amb_list)
-
+        # print("T_amb",T_amb)
         Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)
-        Q_loss_list.append(float(Q_loss))
-        #Q_loss = self.U_tank * (T_tank - T_amb)
-        # 返回温度变化率 dT/dt
+       
+        # if self.pump_on:
+        #     print("33333333333333")
+        #     print(Q_hp)
+        #     print(Load)
+        #     print(Q_loss[0])
         dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t
-        #dTdt = (Q_hp - self.Q_load()[index] - Q_loss[0]) / self.c_t
+        
         return dTdt
 
-   # Solve_ivp 使用
+   # Solve_ivp 
     def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
        # 时间点划分
         t_eval = np.linspace(0, total_time, time_points)
        
-       # 调用 solve_ivp 进行求解
+       # use solve_ivp to solve ode
         solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45",max_step = 100)
        
-       # 提取结果
-        T_tank_values = solution.y[0] - 273.15 # 水箱温度的解
+        Q_hp_values = []
+        
+        for T_tank in solution.y[0]:
+            Q_hp = self.Q_hp(T_tank)
+            Q_hp_values.append(Q_hp)
+       
+        
+       # calculate the sum of Q_hp values
+        # Q_hp_values = [self.Q_hp(temp) for temp in solution.y[0]]
+        Q_hp_total = np.trapz(Q_hp_values, solution.t)
+       
+       # get results
+        T_tank_values = solution.y[0] - 273.15 #tank temp
         time_values = solution.t  # 时间点
        
-        return time_values, T_tank_values
+        return time_values, T_tank_values,Q_hp_total
     
 def main():
-   
     
-    Aw = 132 #float(input("please enter wall area(Aw) in m^2:"))
+    
+    Aw = 82 #float(input("please enter wall area(Aw) in m^2:"))
     Uw =0.51 #float(input("please enter wall U-value(Uw) in W/m^2:"))
     Ar = 120#float(input("please enter roof area(Ar) in m^2:"))
     Ur = 0.18#float(input("please enter roof U-value(Ur) in W/m^2:"))
@@ -153,29 +161,30 @@ def main():
     c_t = 837200#float(input("please enter total thermal capacity of the tank (c_t) in J/K:"))
 
     heat_system = Heat_system(Aw,Uw,Ar,Ur,T_amb_list,T_sp,U_cond,T_cond,U_tank,A_tank,c_t)
-
-    # 调用求解水箱温度的函数
+    
+    # call out solve_ivp
     initial_tank_temp = 45 + 273.15  # assume T_tank initinal 45°C
-    time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp)
+    time_values, T_tank_values,Q_hp_total = heat_system.solve_tank_temperature(initial_tank_temp)
     
-    
-
-    t_eval2 = list(np.linspace(0, 86400, len(Q_hp_list)))
-    t_eval3= []
-    for item in t_eval2:
-        t_eval3.append(float(item))
-
+    print(Q_hp_total)
+    # print result
+    #print(f"Time (hours): {time_values / 3600}")
+    #print(f"Tank Temperature (K): {T_tank_values}")
+    # for i in range (len(T_tank_values)):
+    #     if (T_tank_values[i]> 45+273.15) and (time_values[i]/3600 <= 25):
+    #         T_tank_values[i] = (T_tank_values[i]-273.15)*0.88 +273.15
+    # plt figure
     plt.figure(figsize=(12, 6))
-    plt.plot(np.array(t_eval3)/3600 ,Q_hp_list)
-    #plt.plot(t_eval3 ,Load_list)
-    #plt.plot(t_eval3 ,Q_loss_list)
-
-    #plt.plot(time_values / 3600,T_tank_values)
+    plt.plot(time_values / 3600, T_tank_values )
+    plt.axhline(y=40,color='b')
+    plt.axhline(y=60,color='r')
     plt.xlabel('Time (hours)')
-    plt.ylabel('Total energy')
+    plt.ylabel('Tank Temperature (K)')
     plt.title('Tank Temperature Over Time')
     plt.grid(True)
     plt.show()
 
 if __name__ == "__main__":
     main()
+ 
+   
