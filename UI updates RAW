@@ -1,87 +1,52 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
-# Create a frame for displaying plots and energy consumption
-frame_results = tk.Frame(root)
-frame_results.pack(padx=10, pady=10)
-
-# Label to show total energy consumption
-energy_label = tk.Label(frame_results, text="Total Energy Consumption (kWh):")
-energy_label.pack()
-
-# Function to update the energy consumption display
-def update_energy_display(total_energy_kwh):
-    energy_label.config(text=f"Total Energy Consumption (kWh): {total_energy_kwh:.2f}")
-
-# Function to embed Matplotlib plot in Tkinter
-def plot_in_tkinter(fig, frame):
-    # Clear the frame first
-    for widget in frame.winfo_children():
-        widget.destroy()
-    
-    canvas = FigureCanvasTkAgg(fig, master=frame)
-    canvas.draw()
-    canvas.get_tk_widget().pack()
-    fig.tight_layout()  # Adjust layout to fit nicely in Tkinter
-
-# Modified show_performance_metric to display plots in Tkinter
-def show_performance_metric():
-    selected_metric = performance_metric_var.get()
-    if selected_metric == "Select Metric":
-        return  # Do nothing if no metric is selected
-
-    # Ensure T_amb_list is updated
+def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, display_type):
     if not T_amb_list:
         print("Temperature data not available!")
         return
-
-    # Get parameters from GUI entries
-    try:
-        Aw = float(Aw_entry.get())
-        Uw = float(Uw_entry.get())
-        Ar = float(Ar_entry.get())
-        Ur = float(Ur_entry.get())
-        T_sp = float(T_sp_entry.get())
-        A_tank = float(A_tank_entry.get())
-        c_t = float(mass_of_water_entry.get()) * 4186  # Specific heat capacity of water in J/kgK
-        U_cond = 300  # Default value
-        T_cond = 343.15  # Default value
-        U_tank = 5  # Default value
-        initial_tank_temp = float(initial_tank_temp_entry.get())
-    except ValueError:
-        print("Invalid input in one of the parameter fields.")
-        return
-
-    # Create an instance of Heat_system with current parameters
+    
     heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
-
-    # Solve for tank temperature
+    initial_tank_temp = 318.15  # Initial tank temperature in K
     time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
 
-    # Convert energy from Joules to kWh for better readability and update the label
-    total_energy_kwh = Q_hp_total / (3.6e6)
-    update_energy_display(total_energy_kwh)
+    # Clear previous plots in tank_temp_frame and cop_frame
+    for widget in tank_temp_frame.winfo_children():
+        widget.destroy()
+    for widget in cop_frame.winfo_children():
+        widget.destroy()
 
-    # Plot within Tkinter based on the selected metric
-    fig = plt.Figure(figsize=(8, 4), dpi=100)
-    ax = fig.add_subplot(111)
+    # Tank Temperature Plot
+    fig_tank_temp = Figure(figsize=(5, 4), dpi=100)
+    ax_tank_temp = fig_tank_temp.add_subplot(111)
+    ax_tank_temp.plot(time_values / 3600, T_tank_values, label="Tank Temperature", linewidth=1.5)
+    ax_tank_temp.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
+    ax_tank_temp.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
+    ax_tank_temp.set_xlabel("Time (hours)")
+    ax_tank_temp.set_ylabel("Tank Temperature (°C)")
+    ax_tank_temp.set_title("Tank Temperature Over Time")
+    ax_tank_temp.legend(loc="upper right")
+    ax_tank_temp.grid(True)
 
-    if selected_metric == "Total Energy Consumption":
-        ax.bar(["Total Energy Consumption"], [total_energy_kwh])
-        ax.set_ylabel("Energy (kWh)")
-        ax.set_title("Total Energy Consumption")
-    elif selected_metric == "Average COP":
-        # Plot COP over time
-        ax.plot(time_values / 3600, heat_system.cop_values, label='COP')
-        ax.set_xlabel('Time (hours)')
-        ax.set_ylabel('COP')
-        ax.set_title('Coefficient of Performance (COP) Over Time')
-        ax.legend()
+    # Embed Tank Temperature Plot in Tkinter
+    canvas_tank_temp = FigureCanvasTkAgg(fig_tank_temp, master=tank_temp_frame)
+    canvas_tank_temp.draw()
+    canvas_tank_temp.get_tk_widget().pack()
 
-    ax.grid(True)
-    
-    # Display the plot in the results frame
-    plot_in_tkinter(fig, frame_results)
+    # COP Plot
+    fig_cop = Figure(figsize=(5, 4), dpi=100)
+    ax_cop = fig_cop.add_subplot(111)
+    ax_cop.plot(time_values / 3600, heat_system.cop_values, label="COP", color="purple")
+    ax_cop.set_xlabel("Time (hours)")
+    ax_cop.set_ylabel("COP")
+    ax_cop.set_title("Coefficient of Performance (COP) Over Time")
+    ax_cop.legend()
+    ax_cop.grid(True)
 
-# Update the "Show Metric" button to show results in Tkinter
-tk.Button(frame_metrics, text="Show Metric", command=show_performance_metric).pack(pady=10)
+    # Embed COP Plot in Tkinter
+    canvas_cop = FigureCanvasTkAgg(fig_cop, master=cop_frame)
+    canvas_cop.draw()
+    canvas_cop.get_tk_widget().pack()
+
+    # Optional: Display total energy consumption as a label in Tkinter
+    total_energy_label = tk.Label(root, text=f"Total Energy Consumption: {Q_hp_total / 3.6e6:.2f} kWh")
+    total_energy_label.pack(pady=5)
