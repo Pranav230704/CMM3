@@ -173,32 +173,19 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, di
         plt.show()
         
         
-# Update the settings dictionary to include a placeholder for the outside temperature (T_amb)
 settings = {
     'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
-          'Initial Tank Temperature in K': 200,
-          'Heat Pump On Threshold in K': 318.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)':1, 'City': 'Oslo', 'Outside Temp': 0},  # 'Outside Temp' placeholder
+          'A_tank': 1, 'mass_of_water': 200, 'initial_tank_temp': 200,
+          'on_threshold': 318.15, 'off_threshold': 333.15, 'City': 'Oslo'},
     'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
-          'Initial Tank Temperature in K': 200,
-          'Heat Pump On Threshold in K': 318.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)':1, 'City': 'Cape Town', 'Outside Temp': 0},
+          'A_tank': 1, 'mass_of_water': 200, 'initial_tank_temp': 200,
+          'on_threshold': 318.15, 'off_threshold': 333.15, 'City': 'Cape Town'},
     'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
-          'Initial Tank Temperature in K': 200,
-          'Heat Pump On Threshold in K': 318.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
+          'A_tank': 1, 'mass_of_water': 200, 'initial_tank_temp': 200,
+          'on_threshold': 318.15, 'off_threshold': 333.15, 'City': 'Nairobi'},
     'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
-          'Initial Tank Temperature in K': 200,
-          'Heat Pump On Threshold in K': 318.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)':1, 'City': 'Edinburgh', 'Outside Temp': 0},
+          'A_tank': 1, 'mass_of_water': 200, 'initial_tank_temp': 200,
+          'on_threshold': 318.15, 'off_threshold': 333.15, 'City': 'Edinburgh'},
 }
 
 root = tk.Tk()
@@ -269,7 +256,7 @@ def update_temperature_display(city_name):
         print(f"Failed to fetch temperature data for {city_name}.")
         return 0
 
-# Modify the set_parameters function to also set the 'Outside Temp' value
+# Function to set parameters from the dropdown menu
 def set_parameters(params):
     Aw_entry.delete(0, tk.END)
     Aw_entry.insert(0, params['Aw'])
@@ -281,29 +268,35 @@ def set_parameters(params):
     Ur_entry.insert(0, params['Ur'])
     T_sp_entry.delete(0, tk.END)
     T_sp_entry.insert(0, params['T_sp'])
-    mass_of_water_entry.delete(0, tk.END)
-    mass_of_water_entry.insert(0, params['Mass of Water in Hot Water Tank in kg'])
-    
-    initial_tank_temp_entry.delete(0, tk.END)
-    initial_tank_temp_entry.insert(0, params['Initial Tank Temperature in K'])
-    
-    on_threshold_entry.delete(0, tk.END)
-    on_threshold_entry.insert(0, params['Heat Pump On Threshold in K'])
-    
-    off_threshold_entry.delete(0, tk.END)
-    off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
-    
     A_tank_entry.delete(0, tk.END)
-    A_tank_entry.insert(0, params['Tank Surface Area in m² (A_tank)'])
-    
-    # Set the City value (for use in fetching outside temperature)
+    A_tank_entry.insert(0, params['A_tank'])
+    mass_of_water_entry.delete(0, tk.END)
+    mass_of_water_entry.insert(0, params['mass_of_water'])
+    initial_tank_temp_entry.delete(0, tk.END)
+    initial_tank_temp_entry.insert(0, params['initial_tank_temp'])
+    on_threshold_entry.delete(0, tk.END)
+    on_threshold_entry.insert(0, params['on_threshold'])
+    off_threshold_entry.delete(0, tk.END)
+    off_threshold_entry.insert(0, params['off_threshold'])
     city_var.set(params['City'])
-    
-    # Fetch and display outside temperature for the city
-    outside_temp = update_temperature_display(params['City'])
-    # Update the outside temperature entry field
-    outside_temp_entry.delete(0, tk.END)
-    outside_temp_entry.insert(0, outside_temp)
+
+# Dropdown for selecting building type
+def create_parameter_dropdown(frame):
+    dropdown = ttk.Combobox(frame, values=list(settings.keys()))
+    dropdown.grid(pady=5, columnspan=2)
+
+    def on_dropdown_select(event):
+        selected_option = dropdown.get()
+        if selected_option in settings:
+            params = settings[selected_option]
+            set_parameters(params)
+
+    dropdown.bind("<<ComboboxSelected>>", on_dropdown_select)
+
+param_dropdown_frame = tk.Frame(frame_params)
+param_dropdown_frame.grid(row=3, column=0, columnspan=2, pady=10)
+create_parameter_dropdown(param_dropdown_frame)
+
 
 # Create a new entry for displaying outside temperature
 outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
@@ -327,12 +320,13 @@ def create_parameter_dropdown(frame):
 
 root = tk.Tk()
 root.title("Heat Pump Simulation")
-root.geometry("900x600")  # Set a larger window size for better readability
+root.geometry("900x600")
 
 # Create and configure frames for parameter categories
 frame_params = tk.Frame(root)
 frame_params.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
 
+# Separate frames for each category
 building_params_frame = tk.LabelFrame(frame_params, text="Building Parameters", padx=10, pady=10)
 building_params_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
@@ -342,53 +336,66 @@ tank_params_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 control_params_frame = tk.LabelFrame(frame_params, text="Simulation Control", padx=10, pady=10)
 control_params_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
 
-# Parameter Inputs - Building Parameters
+# Building Parameters
 tk.Label(building_params_frame, text="Wall Area (m²):").grid(row=0, column=0, sticky='e')
 Aw_entry = tk.Entry(building_params_frame, width=20)
-Aw_entry.insert(0, "0")  # Starting value
+Aw_entry.insert(0, "0")
 Aw_entry.grid(row=0, column=1)
 
 tk.Label(building_params_frame, text="Wall U-value (W/m²K):").grid(row=1, column=0, sticky='e')
 Uw_entry = tk.Entry(building_params_frame, width=20)
-Uw_entry.insert(0, "0")  # Starting value
+Uw_entry.insert(0, "0")
 Uw_entry.grid(row=1, column=1)
 
-# Parameter Inputs - Tank Parameters
+tk.Label(building_params_frame, text="Roof Area (m²):").grid(row=2, column=0, sticky='e')
+Ar_entry = tk.Entry(building_params_frame, width=20)
+Ar_entry.insert(0, "0")
+Ar_entry.grid(row=2, column=1)
+
+tk.Label(building_params_frame, text="Roof U-value (W/m²K):").grid(row=3, column=0, sticky='e')
+Ur_entry = tk.Entry(building_params_frame, width=20)
+Ur_entry.insert(0, "0")
+Ur_entry.grid(row=3, column=1)
+
+# Tank Parameters
 tk.Label(tank_params_frame, text="Tank Surface Area (m²):").grid(row=0, column=0, sticky='e')
 A_tank_entry = tk.Entry(tank_params_frame, width=20)
-A_tank_entry.insert(0, "0")  # Starting value
+A_tank_entry.insert(0, "0")
 A_tank_entry.grid(row=0, column=1)
 
-tk.Label(tank_params_frame, text="Initial Tank Temperature (K):").grid(row=1, column=0, sticky='e')
-initial_tank_temp_entry = tk.Entry(tank_params_frame, width=20)
-initial_tank_temp_entry.insert(0, "0")  # Starting value
-initial_tank_temp_entry.grid(row=1, column=1)
+tk.Label(tank_params_frame, text="Mass of Water in Tank (kg):").grid(row=1, column=0, sticky='e')
+mass_of_water_entry = tk.Entry(tank_params_frame, width=20)
+mass_of_water_entry.insert(0, "0")
+mass_of_water_entry.grid(row=1, column=1)
 
-# Parameter Inputs - Simulation Control
+tk.Label(tank_params_frame, text="Initial Tank Temperature (K):").grid(row=2, column=0, sticky='e')
+initial_tank_temp_entry = tk.Entry(tank_params_frame, width=20)
+initial_tank_temp_entry.insert(0, "0")
+initial_tank_temp_entry.grid(row=2, column=1)
+
+# Simulation Control Parameters
 tk.Label(control_params_frame, text="Set Point Temperature (K):").grid(row=0, column=0, sticky='e')
 T_sp_entry = tk.Entry(control_params_frame, width=20)
-T_sp_entry.insert(0, "0")  # Starting value
+T_sp_entry.insert(0, "0")
 T_sp_entry.grid(row=0, column=1)
 
-# Create a collapsible user manual
-def toggle_manual():
-    if manual_text.winfo_ismapped():
-        manual_text.pack_forget()
-    else:
-        manual_text.pack()
+tk.Label(control_params_frame, text="Heat Pump On Threshold (K):").grid(row=1, column=0, sticky='e')
+on_threshold_entry = tk.Entry(control_params_frame, width=20)
+on_threshold_entry.insert(0, "0")
+on_threshold_entry.grid(row=1, column=1)
 
-manual_button = tk.Button(root, text="Show/Hide User Manual", command=toggle_manual)
-manual_button.pack(side=tk.RIGHT, padx=10, pady=10)
+tk.Label(control_params_frame, text="Heat Pump Off Threshold (K):").grid(row=2, column=0, sticky='e')
+off_threshold_entry = tk.Entry(control_params_frame, width=20)
+off_threshold_entry.insert(0, "0")
+off_threshold_entry.grid(row=2, column=1)
 
-manual_text = tk.Text(root, height=20, width=40, wrap=tk.WORD, relief=tk.SUNKEN, borderwidth=2)
-manual_text.insert(tk.END, """Heat Pump Simulation User Manual:
-1) Select a preset building type to load parameters or adjust inputs manually.
-2) Use "Update Temperature" to fetch outside temperature for the selected city.
-3) Run the simulation to analyze tank temperature and performance metrics.
-4) Use "Select Metric" to view specific performance data.
-""")
-manual_text.config(state=tk.DISABLED)
+tk.Label(control_params_frame, text="Select City:").grid(row=3, column=0, sticky='e')
+city_var = tk.StringVar(value="Edinburgh")
+city_dropdown = ttk.Combobox(control_params_frame, textvariable=city_var, values=list(settings['A']['City']))
+city_dropdown.grid(row=3, column=1)
 
+# Button to update temperature
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=11, column=0, columnspan=2, pady=10)
 
 # Create buttons for parameter sets A, B, C, D in the next row
 param_dropdown_frame = tk.Frame(frame_params)
