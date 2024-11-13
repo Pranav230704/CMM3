@@ -64,6 +64,7 @@ for i in cop_yaml['heat_pump_cop_data']:
 #rint(cop_temp)
 
 class Heat_system:
+    
     def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
         self.Aw = Aw
         self.Uw = Uw
@@ -140,8 +141,7 @@ class Heat_system:
         time_values = solution.t
 
         return time_values, T_tank_values, Q_hp_total, avg_cop
-
-    
+  
 # Inside your run_simulation function, pass T_amb_list after fetching it
 def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, display_type):
     # Ensure that T_amb_list is updated before passing it to the Heat_System
@@ -171,19 +171,6 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, di
         plt.grid(True)
         plt.tight_layout()  # Adjust layout to fit everything nicely
         plt.show()
-        
-    elif display_type == 'COP over Time':
-        plt.figure(figsize=(12, 6))
-        plt.plot(time_values / 3600, heat_system.cop_values, label='COP', color='purple')
-        plt.xlabel('Time (hours)')
-        plt.ylabel('COP')
-        plt.title('Coefficient of Performance (COP) Over Time')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-        
-    elif display_type == 'Total Energy Consumption':
-        print("")
         
         
 # Update the settings dictionary to include a placeholder for the outside temperature (T_amb)
@@ -254,7 +241,7 @@ def create_user_manual():
     manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 14, "bold"))
     manual_label.pack()
 
-    manual_text = tk.Text(manual_frame, height=20, width=50, wrap=tk.WORD)
+    manual_text = tk.Text(manual_frame, height=50, width=50, wrap=tk.WORD)
     manual_text.insert(tk.END, user_manual)
     manual_text.config(state=tk.DISABLED)  # Make the text widget read-only
     manual_text.pack()
@@ -429,34 +416,34 @@ metric_dropdown.pack(pady=5)
 
 # Function to show selected performance metric
 def show_performance_metric():
-    
+
     selected_metric = performance_metric_var.get()
     if selected_metric == "Select Metric":
         return  # Do nothing if no metric is selected
 
+    # Call solve_tank_temperature to get avg_cop and Q_hp_total
+    time_values, T_tank_values, total_energy_consumption, avg_cop = Heat_system.solve_tank_temperature(initial_tank_temp=318.15)  # Update initial tank temp as needed
+
     plt.figure()
     if selected_metric == "Total Energy Consumption":
-        # Dummy data for demonstration, replace with actual calculations
-        time = np.linspace(0, 24, 100)
-        energy = np.sin(time) + 1  # Replace with actual energy consumption data
-        plt.plot(time, energy)
-        plt.title("Energy Consumption Over Time")
+        # Display total energy consumption as text or bar plot
+        plt.bar(["Total Energy Consumption"], [total_energy_consumption], color='blue')
         plt.ylabel("Energy (kWh)")
+        plt.title("Total Energy Consumption")
 
-        
     elif selected_metric == "Average COP":
-        # Dummy data for demonstration, replace with actual calculations
         # Plot COP over Time
-        plt.figure(figsize=(12, 6))
-        plt.plot(24, Heat_system.avg_cop, label='COP', color='purple')
+        plt.plot(time_values / 3600, Heat_system.cop_values, label='COP', color='purple')  # Convert time to hours
         plt.xlabel('Time (hours)')
         plt.ylabel('COP')
         plt.title('Coefficient of Performance (COP) Over Time')
         plt.legend()
-            
+
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+ 
 
 # Add button to show performance metric
 tk.Button(frame_metrics, text="Show Metric", command=show_performance_metric).pack(pady=10)
