@@ -1,0 +1,69 @@
+import tkinter as tk
+from tkinter import ttk
+
+root = tk.Tk()
+root.title("Heat Pump Simulation")
+root.geometry("900x600")  # Set a larger window size for better readability
+
+# Create and configure frames for parameter categories
+frame_params = tk.Frame(root)
+frame_params.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+building_params_frame = tk.LabelFrame(frame_params, text="Building Parameters", padx=10, pady=10)
+building_params_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+tank_params_frame = tk.LabelFrame(frame_params, text="Tank Parameters", padx=10, pady=10)
+tank_params_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+
+control_params_frame = tk.LabelFrame(frame_params, text="Simulation Control", padx=10, pady=10)
+control_params_frame.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+
+# Parameter Inputs - Building Parameters
+tk.Label(building_params_frame, text="Wall Area (m²):").grid(row=0, column=0, sticky='e')
+Aw_entry = tk.Entry(building_params_frame, width=20)
+Aw_entry.insert(0, "0")  # Starting value
+Aw_entry.grid(row=0, column=1)
+
+tk.Label(building_params_frame, text="Wall U-value (W/m²K):").grid(row=1, column=0, sticky='e')
+Uw_entry = tk.Entry(building_params_frame, width=20)
+Uw_entry.insert(0, "0")  # Starting value
+Uw_entry.grid(row=1, column=1)
+
+# Parameter Inputs - Tank Parameters
+tk.Label(tank_params_frame, text="Tank Surface Area (m²):").grid(row=0, column=0, sticky='e')
+A_tank_entry = tk.Entry(tank_params_frame, width=20)
+A_tank_entry.insert(0, "0")  # Starting value
+A_tank_entry.grid(row=0, column=1)
+
+tk.Label(tank_params_frame, text="Initial Tank Temperature (K):").grid(row=1, column=0, sticky='e')
+initial_tank_temp_entry = tk.Entry(tank_params_frame, width=20)
+initial_tank_temp_entry.insert(0, "0")  # Starting value
+initial_tank_temp_entry.grid(row=1, column=1)
+
+# Parameter Inputs - Simulation Control
+tk.Label(control_params_frame, text="Set Point Temperature (K):").grid(row=0, column=0, sticky='e')
+T_sp_entry = tk.Entry(control_params_frame, width=20)
+T_sp_entry.insert(0, "0")  # Starting value
+T_sp_entry.grid(row=0, column=1)
+
+# Create a collapsible user manual
+def toggle_manual():
+    if manual_text.winfo_ismapped():
+        manual_text.pack_forget()
+    else:
+        manual_text.pack()
+
+manual_button = tk.Button(root, text="Show/Hide User Manual", command=toggle_manual)
+manual_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+manual_text = tk.Text(root, height=20, width=40, wrap=tk.WORD, relief=tk.SUNKEN, borderwidth=2)
+manual_text.insert(tk.END, """Heat Pump Simulation User Manual:
+1) Select a preset building type to load parameters or adjust inputs manually.
+2) Use "Update Temperature" to fetch outside temperature for the selected city.
+3) Run the simulation to analyze tank temperature and performance metrics.
+4) Use "Select Metric" to view specific performance data.
+""")
+manual_text.config(state=tk.DISABLED)
+
+# Start the main loop
+root.mainloop()
