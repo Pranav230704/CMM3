@@ -130,7 +130,7 @@ class Heat_system:
         t_eval = np.linspace(0, total_time, time_points)
        
        # 调用 solve_ivp 进行求解
-        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45",max_step = 500)
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval,method="RK45",max_step = 100)
        
        # 提取结果
         T_tank_values = solution.y[0] - 273.15 # 水箱温度的解
