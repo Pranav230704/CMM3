@@ -1,52 +1,31 @@
-from matplotlib.figure import Figure
+# Create a single main frame to contain everything
+frame_main = tk.Frame(root)
+frame_main.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
-def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, display_type):
-    if not T_amb_list:
-        print("Temperature data not available!")
-        return
-    
-    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
-    initial_tank_temp = 318.15  # Initial tank temperature in K
-    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
+# Frame for Parameters
+frame_params = tk.Frame(frame_main)
+frame_params.pack(fill=tk.BOTH, padx=10, pady=10)
 
-    # Clear previous plots in tank_temp_frame and cop_frame
-    for widget in tank_temp_frame.winfo_children():
-        widget.destroy()
-    for widget in cop_frame.winfo_children():
-        widget.destroy()
+# Frame for Plots
+frame_plots = tk.Frame(frame_main)
+frame_plots.pack(padx=10, pady=10)
 
-    # Tank Temperature Plot
-    fig_tank_temp = Figure(figsize=(5, 4), dpi=100)
-    ax_tank_temp = fig_tank_temp.add_subplot(111)
-    ax_tank_temp.plot(time_values / 3600, T_tank_values, label="Tank Temperature", linewidth=1.5)
-    ax_tank_temp.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
-    ax_tank_temp.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
-    ax_tank_temp.set_xlabel("Time (hours)")
-    ax_tank_temp.set_ylabel("Tank Temperature (°C)")
-    ax_tank_temp.set_title("Tank Temperature Over Time")
-    ax_tank_temp.legend(loc="upper right")
-    ax_tank_temp.grid(True)
+# Separate frames for each plot within the frame_plots
+tank_temp_frame = tk.Frame(frame_plots)
+tank_temp_frame.pack(side=tk.LEFT, padx=10, pady=10)
+cop_frame = tk.Frame(frame_plots)
+cop_frame.pack(side=tk.LEFT, padx=10, pady=10)
 
-    # Embed Tank Temperature Plot in Tkinter
-    canvas_tank_temp = FigureCanvasTkAgg(fig_tank_temp, master=tank_temp_frame)
-    canvas_tank_temp.draw()
-    canvas_tank_temp.get_tk_widget().pack()
+# Frame for Controls (like buttons to run simulation and show metrics)
+frame_controls = tk.Frame(frame_main)
+frame_controls.pack(padx=10, pady=10)
 
-    # COP Plot
-    fig_cop = Figure(figsize=(5, 4), dpi=100)
-    ax_cop = fig_cop.add_subplot(111)
-    ax_cop.plot(time_values / 3600, heat_system.cop_values, label="COP", color="purple")
-    ax_cop.set_xlabel("Time (hours)")
-    ax_cop.set_ylabel("COP")
-    ax_cop.set_title("Coefficient of Performance (COP) Over Time")
-    ax_cop.legend()
-    ax_cop.grid(True)
+# Pack the parameter input fields, run button, and metric display dropdowns into their respective frames within frame_main
 
-    # Embed COP Plot in Tkinter
-    canvas_cop = FigureCanvasTkAgg(fig_cop, master=cop_frame)
-    canvas_cop.draw()
-    canvas_cop.get_tk_widget().pack()
+# Add a button to run simulation within the controls frame
+tk.Button(frame_controls, text="Run Simulation", command=lambda: run_simulation(
+    float(Aw_entry.get()), float(Uw_entry.get()), float(Ar_entry.get()), float(Ur_entry.get()), 
+    float(T_sp_entry.get()), float(U_cond), float(T_cond), float(U_tank), float(A_tank_entry.get()), 
+    float(c_t), display_type='Temperature')).pack(pady=10)
 
-    # Optional: Display total energy consumption as a label in Tkinter
-    total_energy_label = tk.Label(root, text=f"Total Energy Consumption: {Q_hp_total / 3.6e6:.2f} kWh")
-    total_energy_label.pack(pady=5)
+# Organize all elements to be displayed within frame_main
