@@ -94,7 +94,7 @@ class HeatSystem:
         return time_values, T_tank_values
 
 def main():
-    Aw = 82
+    Aw = 132
     Uw = 0.51
     Ar = 120
     Ur = 0.18
