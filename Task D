@@ -73,7 +73,7 @@ class Heat_system:
             else:
                 Q_load = -1*(self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))
                 
-                
+            #Q_load = -1*(self.Aw*self.Uw*(Tamb + 273 - self.T_sp)+self.Ar*self.Ur*(Tamb + 273 - self.T_sp))#run this to get the original    
             #print("i",i)
             Q_loads.append(Q_load)
     
