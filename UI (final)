@@ -187,6 +187,282 @@ frame_plot.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 # Additional UI setup
 # (Include all the remaining code for setting up the user manual, parameters frame, and other components here)
 
+# Add user manual as a text widget in a frame
+def create_user_manual():
+    user_manual = """
+    Heat Pump Simulation User Manual
+
+    This tool allows you to model and analyze the behavior of a heat pump system based on various parameters. Below is a step-by-step guide to help you get started.
+
+1)  Select one of the preset buildings (via the dropdown menu) to set the appropriate system parameters:
+    
+    Building A: a well-insulated, smaller home.
+    Building B: a moderately insulated, medium-sized home.
+    Building C: a poorly-insulated, larger house.
+    Building D: the default building given in the ‘input.yaml’ file.
+    
+    This will select all the inputs.
+    You will know if the inputs have been selected successfully as it will state in the spyder kernal 'Temperature data for city has been fetched successfully'
+    
+2) Edit the parameters to suit your own inputs, if you wish to change the outside tempearture input you must click update temperature in order to update it (optional).
+
+3) Click the run simulation button which will run the inputs using the code and output the results on our spyder code.
+
+   (If you wish to view the performance metrics)
+    
+4) Select the performance metrics dropdown menu. 
+
+5) Select the inputs you would like to view for the metric.
+    
+6) Click show metric.
+    
+7) View the metric graph on spyder.
+    """
+    manual_frame = tk.Frame(root)
+    manual_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=20)
+
+    manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 14, "bold"))
+    manual_label.pack()
+
+    manual_text = tk.Text(manual_frame, height=50, width=50, wrap=tk.WORD)
+    manual_text.insert(tk.END, user_manual)
+    manual_text.config(state=tk.DISABLED)  # Make the text widget read-only
+    manual_text.pack()
+
+# Create and display the user manual
+create_user_manual()
+
+
+# Frame for Parameters
+frame_params = tk.Frame(root)
+frame_params.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+
+# Function to update the temperature based on selected city
+def update_temperature_display(city_name):
+    global T_amb_list  # Global variable to hold the temperature data
+    # Fetch temperature data for the selected city
+    T_amb_list = get_temperature_for_city(city_name)
+    if T_amb_list:
+        print(f"Temperature data for {city_name} fetched successfully!")
+        # Set the first temperature value as the current outside temperature for display
+        current_temp = T_amb_list[0]  # Assuming we're showing the first value for now
+        return current_temp
+    else:
+        print(f"Failed to fetch temperature data for {city_name}.")
+        return 0
+
+# Modify the set_parameters function to also set the 'Outside Temp' value
+def set_parameters(params):
+    Aw_entry.delete(0, tk.END)
+    Aw_entry.insert(0, params['Aw'])
+    Uw_entry.delete(0, tk.END)
+    Uw_entry.insert(0, params['Uw'])
+    Ar_entry.delete(0, tk.END)
+    Ar_entry.insert(0, params['Ar'])
+    Ur_entry.delete(0, tk.END)
+    Ur_entry.insert(0, params['Ur'])
+    T_sp_entry.delete(0, tk.END)
+    T_sp_entry.insert(0, params['T_sp'])
+    mass_of_water_entry.delete(0, tk.END)
+    mass_of_water_entry.insert(0, params['Mass of Water in Hot Water Tank in kg'])
+    
+    initial_tank_temp_entry.delete(0, tk.END)
+    initial_tank_temp_entry.insert(0, params['Initial Tank Temperature in K'])
+    
+    on_threshold_entry.delete(0, tk.END)
+    on_threshold_entry.insert(0, params['Heat Pump On Threshold in K'])
+    
+    off_threshold_entry.delete(0, tk.END)
+    off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
+    
+    A_tank_entry.delete(0, tk.END)
+    A_tank_entry.insert(0, params['Tank Surface Area in m² (A_tank)'])
+    
+    # Set the City value (for use in fetching outside temperature)
+    city_var.set(params['City'])
+    
+    # Fetch and display outside temperature for the city
+    outside_temp = update_temperature_display(params['City'])
+    # Update the outside temperature entry field
+    outside_temp_entry.delete(0, tk.END)
+    outside_temp_entry.insert(0, outside_temp)
+
+# Create a new entry for displaying outside temperature
+outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
+outside_temp_label.grid(row=6, column=0, sticky='e')
+outside_temp_entry = tk.Entry(frame_params)
+outside_temp_entry.insert(0, "0")  # Default value
+outside_temp_entry.grid(row=6, column=1)
+
+# Modify the dropdown to include the city and temperature update
+def create_parameter_dropdown(frame):
+    dropdown = ttk.Combobox(frame, values=list(settings.keys()))
+    dropdown.grid(pady=5, columnspan=2)
+
+    def on_dropdown_select(event):
+        selected_option = dropdown.get()
+        if selected_option in settings:
+            params = settings[selected_option]
+            set_parameters(params)
+
+    dropdown.bind("<<ComboboxSelected>>", on_dropdown_select)
+
+# Parameter Entry Labels and Fields
+tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=0, column=0, sticky='e')
+Aw_entry = tk.Entry(frame_params)
+Aw_entry.insert(0, "0")  # Starting value
+Aw_entry.grid(row=0, column=1)
+
+tk.Label(frame_params, text="Wall U-value in W/m²K (Uw):").grid(row=1, column=0, sticky='e')
+Uw_entry = tk.Entry(frame_params)
+Uw_entry.insert(0, "0")  # Starting value
+Uw_entry.grid(row=1, column=1)
+
+tk.Label(frame_params, text="Roof Area in m² (Ar):").grid(row=2, column=0, sticky='e')
+Ar_entry = tk.Entry(frame_params)
+Ar_entry.insert(0, "0")  # Starting value
+Ar_entry.grid(row=2, column=1)
+
+tk.Label(frame_params, text="Roof U-value in W/m²K (Ur):").grid(row=3, column=0, sticky='e')
+Ur_entry = tk.Entry(frame_params)
+Ur_entry.insert(0, "0")  # Starting value
+Ur_entry.grid(row=3, column=1)
+
+tk.Label(frame_params, text="Set Point Temperature in K (T_sp):").grid(row=4, column=0, sticky='e')
+T_sp_entry = tk.Entry(frame_params)
+T_sp_entry.insert(0, "0")  # Starting value
+T_sp_entry.grid(row=4, column=1)
+
+tk.Label(frame_params, text="Tank Surface Area in m² (A_tank):").grid(row=5, column=0, sticky='e')
+A_tank_entry = tk.Entry(frame_params)
+A_tank_entry.insert(0, "0")  # Starting value
+A_tank_entry.grid(row=5, column=1)
+
+tk.Label(frame_params, text="Mass of Water in Hot Water Tank in kg:").grid(row=6, column=0, sticky='e')
+mass_of_water_entry = tk.Entry(frame_params)
+mass_of_water_entry.insert(0, "0")  # Starting value
+mass_of_water_entry.grid(row=6, column=1)
+
+tk.Label(frame_params, text="Initial Tank Temperature in K:").grid(row=7, column=0, sticky='e')
+initial_tank_temp_entry = tk.Entry(frame_params)
+initial_tank_temp_entry.insert(0, "0")  # Starting value
+initial_tank_temp_entry.grid(row=7, column=1)
+
+tk.Label(frame_params, text="Heat Pump On Threshold in K:").grid(row=8, column=0, sticky='e')
+on_threshold_entry = tk.Entry(frame_params)
+on_threshold_entry.insert(0, "0")  # Starting value
+on_threshold_entry.grid(row=8, column=1)
+
+tk.Label(frame_params, text="Heat Pump Off Threshold in K:").grid(row=9, column=0, sticky='e')
+off_threshold_entry = tk.Entry(frame_params)
+off_threshold_entry.insert(0, "0")  # Starting value
+off_threshold_entry.grid(row=9, column=1)
+
+# Add the city selection dropdown
+tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=10, column=0, sticky='e')
+city_var = tk.StringVar(value="Edinburgh")  # Default city is Edinburgh
+city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
+city_dropdown.grid(row=10, column=1)
+
+# Button to update temperature
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=11, column=0, columnspan=2, pady=10)
+
+# Create buttons for parameter sets A, B, C, D in the next row
+param_dropdown_frame = tk.Frame(frame_params)
+param_dropdown_frame.grid(row=12, column=0, columnspan=2, pady=10)
+create_parameter_dropdown(param_dropdown_frame)
+
+# Update the reset function to reset all parameters, including A_tank, to zero
+def reset_parameters():
+    entries = [Aw_entry, Uw_entry, Ar_entry, Ur_entry, T_sp_entry, mass_of_water_entry, 
+               initial_tank_temp_entry, on_threshold_entry, off_threshold_entry, A_tank_entry]
+    for entry in entries:
+        entry.delete(0, tk.END)
+        entry.insert(0, "0")
+
+# Add the Reset button to the Parameters frame
+tk.Button(frame_params, text="Reset to 0", command=reset_parameters).grid(row=13, column=0, columnspan=2, pady=10)
+
+# Frame for Performance Metrics
+frame_metrics = tk.Frame(root)
+frame_metrics.pack(padx=10, pady=10)
+
+# Create a section for performance metrics
+tk.Label(frame_metrics, text="Select Performance Metric:").pack()
+
+# Dropdown menu for performance metrics
+performance_metric_var = tk.StringVar(value="Select Metric")
+performance_metrics = ["Total Energy Consumption", "Average COP"]
+metric_dropdown = ttk.Combobox(frame_metrics, textvariable=performance_metric_var, values=performance_metrics)
+metric_dropdown.pack(pady=5)
+
+# Function to show selected performance metric
+def show_performance_metric():
+    selected_metric = performance_metric_var.get()
+    if selected_metric == "Select Metric":
+        return  # Do nothing if no metric is selected
+
+    # First, ensure that T_amb_list is updated
+    if not T_amb_list:
+        print("Temperature data not available!")
+        return
+
+    # Get parameters from GUI entries
+    try:
+        Aw = float(Aw_entry.get())
+        Uw = float(Uw_entry.get())
+        Ar = float(Ar_entry.get())
+        Ur = float(Ur_entry.get())
+        T_sp = float(T_sp_entry.get())
+        A_tank = float(A_tank_entry.get())
+        c_t = float(mass_of_water_entry.get()) * 4186  # Specific heat capacity of water in J/kgK
+        U_cond = 300  # Default value
+        T_cond = 343.15  # Default value
+        U_tank = 5  # Default value
+        initial_tank_temp = float(initial_tank_temp_entry.get())
+    except ValueError:
+        print("Invalid input in one of the parameter fields.")
+        return
+
+    # Create an instance of Heat_system with the current parameters
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+    # Solve for tank temperature
+    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
+
+    plt.figure()
+    if selected_metric == "Total Energy Consumption":
+        # Convert energy from Joules to kWh for better readability
+        total_energy_kwh = Q_hp_total / (3.6e6)
+        plt.bar(["Total Energy Consumption"], [total_energy_kwh], color='blue')
+        plt.ylabel("Energy (kWh)")
+        plt.title("Total Energy Consumption")
+    elif selected_metric == "Average COP":
+        # Plot COP over time
+        plt.plot(time_values / 3600, heat_system.cop_values, label='COP', color='purple')  # Convert time to hours
+        plt.xlabel('Time (hours)')
+        plt.ylabel('COP')
+        plt.title('Coefficient of Performance (COP) Over Time')
+        plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+ 
+# Add button to show performance metric
+tk.Button(frame_metrics, text="Show Metric", command=show_performance_metric).pack(pady=10)
+
+# Frame for running simulation
+frame_simulation = tk.Frame(root)
+frame_simulation.pack(padx=10, pady=10)
+
+# Define default values for U_cond, T_cond, U_tank, c_t
+U_cond = 300
+T_cond = 343.15
+U_tank = 5
+c_t = 837200
+
 
 # Button to run the simulation, now displaying the plot in the GUI
 tk.Button(frame_simulation, text="Run Simulation", command=lambda: run_simulation(
