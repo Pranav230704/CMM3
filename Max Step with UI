@@ -416,29 +416,52 @@ metric_dropdown.pack(pady=5)
 
 # Function to show selected performance metric
 def show_performance_metric():
-
     selected_metric = performance_metric_var.get()
     if selected_metric == "Select Metric":
         return  # Do nothing if no metric is selected
 
-    # Call solve_tank_temperature to get avg_cop and Q_hp_total
-    time_values, T_tank_values, total_energy_consumption, avg_cop = Heat_system.solve_tank_temperature(initial_tank_temp=318.15)  # Update initial tank temp as needed
+    # First, ensure that T_amb_list is updated
+    if not T_amb_list:
+        print("Temperature data not available!")
+        return
+
+    # Get parameters from GUI entries
+    try:
+        Aw = float(Aw_entry.get())
+        Uw = float(Uw_entry.get())
+        Ar = float(Ar_entry.get())
+        Ur = float(Ur_entry.get())
+        T_sp = float(T_sp_entry.get())
+        A_tank = float(A_tank_entry.get())
+        c_t = float(mass_of_water_entry.get()) * 4186  # Specific heat capacity of water in J/kgK
+        U_cond = 300  # Default value
+        T_cond = 343.15  # Default value
+        U_tank = 5  # Default value
+        initial_tank_temp = float(initial_tank_temp_entry.get())
+    except ValueError:
+        print("Invalid input in one of the parameter fields.")
+        return
+
+    # Create an instance of Heat_system with the current parameters
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+    # Solve for tank temperature
+    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
 
     plt.figure()
     if selected_metric == "Total Energy Consumption":
-        # Display total energy consumption as text or bar plot
-        plt.bar(["Total Energy Consumption"], [total_energy_consumption], color='blue')
+        # Convert energy from Joules to kWh for better readability
+        total_energy_kwh = Q_hp_total / (3.6e6)
+        plt.bar(["Total Energy Consumption"], [total_energy_kwh], color='blue')
         plt.ylabel("Energy (kWh)")
         plt.title("Total Energy Consumption")
-
     elif selected_metric == "Average COP":
-        # Plot COP over Time
-        plt.plot(time_values / 3600, Heat_system.cop_values, label='COP', color='purple')  # Convert time to hours
+        # Plot COP over time
+        plt.plot(time_values / 3600, heat_system.cop_values, label='COP', color='purple')  # Convert time to hours
         plt.xlabel('Time (hours)')
         plt.ylabel('COP')
         plt.title('Coefficient of Performance (COP) Over Time')
         plt.legend()
-
     plt.grid(True)
     plt.tight_layout()
     plt.show()
