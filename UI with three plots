@@ -1,0 +1,71 @@
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+
+# Create a frame for displaying plots and energy consumption within the user interface
+frame_plots = tk.Frame(root)
+frame_plots.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+def show_performance_metric():
+    # Ensure that T_amb_list is updated
+    if not T_amb_list:
+        print("Temperature data not available!")
+        return
+
+    # Get parameters from GUI entries
+    try:
+        Aw = float(Aw_entry.get())
+        Uw = float(Uw_entry.get())
+        Ar = float(Ar_entry.get())
+        Ur = float(Ur_entry.get())
+        T_sp = float(T_sp_entry.get())
+        A_tank = float(A_tank_entry.get())
+        c_t = float(mass_of_water_entry.get()) * 4186  # Specific heat capacity of water in J/kgK
+        U_cond = 300  # Default value
+        T_cond = 343.15  # Default value
+        U_tank = 5  # Default value
+        initial_tank_temp = float(initial_tank_temp_entry.get())
+    except ValueError:
+        print("Invalid input in one of the parameter fields.")
+        return
+
+    # Create an instance of Heat_system with the current parameters
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+    # Solve for tank temperature
+    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
+
+    # Clear the frame to prevent overlapping graphs
+    for widget in frame_plots.winfo_children():
+        widget.destroy()
+
+    # Plot 1: Tank Temperature vs Time
+    fig1, ax1 = plt.subplots()
+    ax1.plot(time_values / 3600, T_tank_values, label="Tank Temperature", linewidth=1.5)
+    ax1.axhline(y=60, color="red", linestyle="--", label="Heat Pump Off Threshold (60°C)")
+    ax1.axhline(y=40, color="blue", linestyle="--", label="Heat Pump On Threshold (40°C)")
+    ax1.set_xlabel("Time (hours)")
+    ax1.set_ylabel("Tank Temperature (°C)")
+    ax1.set_title("Tank Temperature Over Time")
+    ax1.legend(loc="upper right")
+    ax1.grid(True)
+    canvas1 = FigureCanvasTkAgg(fig1, frame_plots)
+    canvas1.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    
+    # Plot 2: COP vs Time
+    fig2, ax2 = plt.subplots()
+    ax2.plot(time_values / 3600, heat_system.cop_values, label="COP", color="purple", linewidth=1.5)
+    ax2.set_xlabel("Time (hours)")
+    ax2.set_ylabel("COP")
+    ax2.set_title("Coefficient of Performance (COP) Over Time")
+    ax2.legend()
+    ax2.grid(True)
+    canvas2 = FigureCanvasTkAgg(fig2, frame_plots)
+    canvas2.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    
+    # Display total energy consumption in kWh
+    total_energy_kwh = Q_hp_total / (3.6e6)
+    energy_display = tk.Label(frame_plots, text=f"Total Energy Consumption: {total_energy_kwh:.2f} kWh", font=("Arial", 12, "bold"))
+    energy_display.pack(side=tk.BOTTOM, pady=10)
+
+# Add button to show performance metric
+tk.Button(frame_metrics, text="Show Metric", command=show_performance_metric).pack(pady=10)
