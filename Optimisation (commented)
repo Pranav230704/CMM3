@@ -1,0 +1,186 @@
+
+import numpy as np
+import yaml
+from scipy.optimize import curve_fit
+from datetime import datetime
+from meteostat import Point, Hourly
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Define the location for temperature data (e.g., Oslo)
+location = Point(59.9139, 10.7522) # Oslo coordinates
+# Set the time period for data retrieval (24-hour period)
+start = datetime(2023, 1, 1, 0) # Start time
+end = datetime(2023, 1, 2, 0)   # End time (24-hour period)
+
+# Fetch hourly temperature data for the given location and time range
+data = Hourly(location, start, end)
+data = data.fetch()
+T_amb_list = data['temp'].tolist() # Extract temperature values into a list
+
+# Open COP data from yaml file
+file_path1 = r'/Users/aydannevzat1/Desktop/heat_pump_cop_synthetic_full.yaml' # Path to file (please change when necessary)
+with open(file_path1,'r') as file:
+    cop_yaml = yaml.safe_load(file) # Load yaml content
+
+# Extract outdoor temperature and COP values from the file
+cop_temp = []  # List to store outdoor temperatures
+cop_cop = []   # List to store corresponding COP values
+for i in cop_yaml['heat_pump_cop_data']:
+    cop_temp.append(i['outdoor_temp_C'])
+    cop_cop.append(i['COP_noisy'])
+
+# Define the Heat_system class which simulates the heat pump system
+class Heat_system:
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
+        self.Aw = Aw  # Wall area (m²)
+        self.Uw = Uw  # Wall U-value (W/m²K)
+        self.Ar = Ar  # Roof area (m²)
+        self.Ur = Ur  # Roof U-value (W/m²K)
+        self.T_amb_list = T_amb_list  # Ambient temperature list (K)
+        self.T_sp = T_sp  # Setpoint temperature (K)
+        self.U_cond = U_cond  # Condenser heat transfer coefficient (W/m²K)
+        self.T_cond = T_cond  # Condenser temperature (K)
+        self.U_tank = U_tank  # Tank heat loss coefficient (W/K)
+        self.A_tank = A_tank  # Tank heat transfer area (m²)
+        self.c_t = c_t  # Thermal capacity of the tank (J/K)
+        self.pump_on = False  # Heat pump initially off
+        self.real_cop = []  # List to store calculated COP values for averaging
+        self.cop_values = []  # List to store COP values at each time point
+
+    # Calculate the load Q_load at each time step based on ambient temperature
+    def Q_load(self):
+        Q_loads = []
+        for Tamb in self.T_amb_list:
+            Q_load = (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) * -1
+            Q_loads.append(Q_load) # Append load to the list
+        return Q_loads
+
+    # COP function based on curve fitting with parameters a and b
+    def cop(self, T_amb, a, b):
+        delta_T = 60 - T_amb  # Temperature difference between 60°C and ambient
+        return a + b / delta_T  # COP formula
+
+    # Fit COP parameters using the provided data once
+    popt, pcov = curve_fit(lambda T, a, b: a + b / (60 - T), cop_temp, cop_cop)  # Curve fitting for COP
+    a, b = popt  # Optimised COP parameters
+
+    # Calculate the heat pump output Q_hp based on tank and ambient temperatures
+    def Q_hp(self, T_tank, T_amb):
+        # Check if the heat pump should be on or off based on tank temperature
+        if T_tank >= 60 + 273.15:  # If tank temperature is above 60°C, turn off the pump
+            self.pump_on = False
+        elif T_tank <= 40 + 273.15:  # If tank temperature is below 40°C, turn on the pump
+            self.pump_on = True
+
+        # Return heat pump output if pump is on, otherwise return 0
+        if self.pump_on:
+            
+            return 1.11 * (self.U_cond * (self.T_cond - T_tank)) # Heat pump output equation
+        else:
+            return 0
+
+    # Define the ODE for tank temperature based on heat pump and load
+    def tank_temperature_ode(self, t, T_tank):
+        T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # Interpolate ambient temp at time t
+        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())  # Interpolate load at time t
+        Q_hp = self.Q_hp(T_tank, T_amb)  # Heat pump output at time t
+        Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)  # Heat loss from tank
+        
+        dTdt = (Q_hp - Load - Q_loss[0]) / self.c_t # Rate of change of tank temperature
+        return dTdt
+
+    # Solve the ODE for tank temperature over 24h time period
+    def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
+        t_eval = np.linspace(0, total_time, time_points) # Evaluation time points
+        
+        # Interpolate T_amb_list to match the evaluation points
+        T_amb_interpolated = np.interp(t_eval, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)
+
+        # Solve the ODE for tank temperature using the Runge-Kutta method (RK45)
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval, method="RK45", max_step=100)
+
+        # Calculate COP at each t_eval point based on T_amb
+        self.cop_values = [self.cop(T_amb, self.a, self.b) for T_amb in T_amb_interpolated]
+
+        # Calculate total energy consumption by integrating Q_hp over time
+        Q_hp_values = [self.Q_hp(T_tank, T_amb) for T_tank, T_amb in zip(solution.y[0], T_amb_interpolated)]
+        Q_hp_total = np.trapz(Q_hp_values, solution.t)   # Total energy consumption (integral of Q_hp)
+        
+        # Calculate average COP
+        avg_cop = np.mean(self.real_cop) if self.real_cop else 0  # Average COP if real_cop is not empty
+
+        # Convert tank temperature from Kelvin to Celsius and return results
+        T_tank_values = solution.y[0] - 273.15  # Convert tank temperature to Celsius
+        time_values = solution.t
+
+        return time_values, T_tank_values, Q_hp_total, avg_cop
+
+# Main function to run the heat pump simulation
+def main():
+    # Set parameters for a specific building configuration (e.g., House A)
+    Aw = 85  # Wall area (m²)
+    Uw = 0.40  # Wall U-value (W/m²K)
+    Ar = 80  # Roof area (m²)
+    Ur = 0.15  # Roof U-value (W/m²K)
+    T_sp = 288.15  # Indoor setpoint temperature (K)
+    U_cond = 300  # Condenser heat transfer coefficient (W/m²K)
+    T_cond = 343.15  # Condenser temperature (K)
+    U_tank = 5  # Tank heat loss coefficient (W/K)
+    A_tank = 1  # Tank heat transfer area (m²)
+    c_t = 837200  # Thermal capacity of the tank (J/K)
+
+    # Initialize heat system with given parameters
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+    # Set the initial tank temperature and solve the system
+    initial_tank_temp = 45 + 273.15  # Initial tank temperature (45°C)
+    time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
+
+    # Print performance metrics
+    print(f"Total Energy Consumption (Q_hp_total): {Q_hp_total} J")
+
+    # Optimization Section
+    # Define ranges for each parameter
+    A_w_range = np.linspace(85, 180, 5)   # Wall area, 85-180 m² in 5 steps
+    U_w_range = np.linspace(0.4, 0.8, 5)  # Wall U-value, 0.4-0.8 W/m²K in 5 steps
+    A_r_range = np.linspace(80, 160, 5)   # Roof area, 80-160 m² in 5 steps
+    U_r_range = np.linspace(0.15, 0.3, 5)  # Roof U-value, 0.15-0.3 W/m²K in 5 steps
+    T_sp_range = np.linspace(288.15, 303.15, 5) # Setpoint temperature, 288.15-303.15 K in 5 steps
+    A_tank_range = np.linspace(0.6, 1.4, 5)  # Tank area, 0.6-1.4 m² in 5 steps
+    U_tank_range = np.linspace(2, 10, 5)     # Tank heat loss coeff., 2-10 W/K in 5 steps
+    U_cond_range = np.linspace(100, 500, 5)  # Condenser U-value, 100-500 W/m²K in 5 steps
+
+
+    # Initialise variables to track the best parameters and the best metric
+    best_params = None
+    best_metric = float('inf')  # Set to infinity to minimize the metric
+
+    # Begin Grid Search
+    for A_w in A_w_range:
+        for U_w in U_w_range:
+            for A_r in A_r_range:
+                for U_r in U_r_range:
+                    for T_sp in T_sp_range:
+                        for A_tank in A_tank_range:
+                            for U_tank in U_tank_range:
+                                for U_cond in U_cond_range:
+                                    # Initialise Heat_system with current parameters
+                                    heat_system = Heat_system(A_w, U_w, A_r, U_r, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+                                    # Run the simulation for the current parameters
+                                    _, _, total_energy, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
+
+                                    # Choose metric
+                                    metric = total_energy  # Minimise total energy
+
+                                    # Update if we find a better solution
+                                    if metric < best_metric:
+                                        best_metric = metric
+                                        best_params = (A_w, U_w, A_r, U_r, T_sp, A_tank, U_tank, U_cond)
+
+    # Print out optimal parameters
+    print("Optimal parameters:", best_params)
+    
+if __name__ == "__main__":
+    main()
