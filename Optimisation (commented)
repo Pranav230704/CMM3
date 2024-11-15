@@ -6,8 +6,8 @@ from meteostat import Point, Hourly
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
-# define the location (update this for each house type; currently set to Cape Town)
-location = Point(-33.9249, 18.4241)  # coordinates for Cape Town
+# define the location (update this for each house type; currently set to Nairobi)
+location = Point(-1.2864, 36.8172)  # coordinates for Nairobi
 
 # set the time period for data retrieval (one-day period in this example)
 start = datetime(2023, 1, 1, 0)  # start time
