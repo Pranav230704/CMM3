@@ -64,6 +64,8 @@ class HeatSystem:
                     Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1000
                 else:
                     Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
+            elif day_type == 'before hot-water adjustment':
+                Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
             Q_loads.append(Q_load)
         return Q_loads
 
@@ -108,25 +110,34 @@ def main():
 
     heat_system = HeatSystem(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
 
-    day_types = ['weekday', 'saturday', 'holiday']
+    day_types = ['weekday', 'saturday', 'holiday', 'before hot-water adjustment']
     results = {}
 
     for day_type in day_types:
         time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp, day_type)
         results[day_type] = (time_values, T_tank_values)
 
-    # Plot each day type in a separate graph
-    for day_type, (time_values, T_tank_values) in results.items():
-        plt.figure(figsize=(10, 5))
-        plt.plot(time_values / 3600, T_tank_values, label=f'{day_type.capitalize()} Tank Temperature')
-        plt.axhline(y=40, color='b', linestyle='--', label='Lower Limit (40°C)')
-        plt.axhline(y=60, color='r', linestyle='--', label='Upper Limit (60°C)')
-        plt.xlabel('Time (hours)')
-        plt.ylabel('Tank Temperature (°C)')
-        plt.title(f'Tank Temperature Over Time - {day_type.capitalize()}')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+    # Plot each day type in a subplot
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+    axs = axs.flatten()
+
+    for i, day_type in enumerate(day_types):
+        time_values, T_tank_values = results[day_type]
+        axs[i].plot(time_values / 3600, T_tank_values, label=f'{day_type.capitalize()} Tank Temperature')
+        axs[i].axhline(y=40, color='b', linestyle='--', label='Lower Limit (40°C)')
+        axs[i].axhline(y=60, color='r', linestyle='--', label='Upper Limit (60°C)')
+        axs[i].set_xlabel('Time (hours)', fontsize=12, fontweight='bold')
+        axs[i].set_ylabel('Tank Temperature (°C)', fontsize=9, fontweight='bold')
+        axs[i].set_title(f'Tank Temperature Over Time - {day_type.capitalize()}', fontsize=11)
+        axs[i].set_xlim([0, 24])
+        axs[i].set_xticks(np.arange(0, 25, 4))
+        axs[i].set_xticklabels([str(x) for x in range(0, 25, 4)])
+        axs[i].set_ylim(bottom=38)
+        axs[i].legend()
+        axs[i].grid(True)
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()
