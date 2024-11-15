@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 cities = {
     'Edinburgh': Point(55.9533, -3.1883),
     'Oslo': Point(59.9139, 10.7522),
+    'Harbin': Point(45.8038, 126.5347),
     'Toronto': Point(43.65107, -79.347015),
     'Nairobi': Point(-1.286389, 36.817223),
     'Rio': Point(-22.9068, -43.1729),
@@ -161,7 +162,7 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
     ax.set_xlabel("Time (hours)")
     ax.set_ylabel("Tank Temperature (°C)")
     ax.set_title("Tank Temperature Over Time")
-    ax.set_ylim(min(T_tank_values) - 5, max(T_tank_values) + 5)
+    ax.set_ylim(min(T_tank_values) - 5, max(T_tank_values) + 15)
     ax.legend(loc="upper right")
     ax.grid(True)
     plt.tight_layout()  # Ensure labels are not cut off
@@ -264,7 +265,7 @@ def create_user_manual():
     manual_frame = tk.Frame(root, bd=2, relief=tk.GROOVE)  # Added border for separation
     manual_frame.grid(row=0, column=2, sticky='nsew', padx=20, pady=20)
 
-    manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 14, "bold"))
+    manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 16, "bold"))
     manual_label.grid(row=0, column=0, sticky='n')
 
     manual_text = tk.Text(manual_frame, height=30, width=50, wrap=tk.WORD)
@@ -407,23 +408,23 @@ def on_building_selection_change(event):
 tk.Label(frame_params, text="Building Types:").grid(row=14, column=0, sticky='e')
 building_types = {
     'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Mass of Water in Hot Water Tank in kg': 160, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Oslo', 'Outside Temp': 0},
+          'Tank Surface Area in m² (A_tank)': 0.8, 'City': 'Harbin', 'Outside Temp': 0},
     'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
           'Mass of Water in Hot Water Tank in kg': 200, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Cape Town', 'Outside Temp': 0},
+          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
     'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Mass of Water in Hot Water Tank in kg': 240, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
+          'Tank Surface Area in m² (A_tank)': 1.2, 'City': 'Rio', 'Outside Temp': 0},
     'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
           'Mass of Water in Hot Water Tank in kg': 200, 
           'Initial Tank Temperature in K': 318.15,
@@ -457,9 +458,9 @@ frame_performance_metrics.grid(row=2, column=0, padx=10, pady=10, sticky='nsew')
 tk.Label(frame_performance_metrics, text="Performance Metrics", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky='n')
 
 # Display total energy consumption
-energy_label = tk.Label(frame_performance_metrics, text="Total Energy Consumption: ", font=("Arial", 10))
+energy_label = tk.Label(frame_performance_metrics, text="Total Energy Consumption: ", font=("Arial", 14, 'bold'))
 energy_label.grid(row=2, column=0, pady=10)
-avg_cop_label = tk.Label(frame_performance_metrics, text="Average COP: ", font=("Arial", 10))
+avg_cop_label = tk.Label(frame_performance_metrics, text="Average COP: ", font=("Arial", 14, 'bold'))
 avg_cop_label.grid(row=3, column=0, pady=10)
 
 # Frame for running simulation
