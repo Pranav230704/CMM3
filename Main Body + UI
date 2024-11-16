@@ -333,13 +333,6 @@ def set_parameters(params):
     outside_temp_entry.delete(0, tk.END)
     outside_temp_entry.insert(0, outside_temp)
 
-# Create a new entry for displaying outside temperature
-outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
-outside_temp_label.grid(row=7, column=0, sticky='e')
-outside_temp_entry = tk.Entry(frame_params)
-outside_temp_entry.insert(0, "0")  # Default value
-outside_temp_entry.grid(row=7, column=1)
-
 # Parameter Entry Labels and Fields
 tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=1, column=0, sticky='e')
 Aw_entry = ttk.Entry(frame_params)
@@ -370,6 +363,13 @@ tk.Label(frame_params, text="Tank Surface Area in m² (A_tank):").grid(row=6, co
 A_tank_entry = ttk.Entry(frame_params)
 A_tank_entry.insert(0, "0")  # Starting value
 A_tank_entry.grid(row=6, column=1, pady=5, padx=5)
+
+# Create a new entry for displaying outside temperature
+outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
+outside_temp_label.grid(row=7, column=0, sticky='e')
+outside_temp_entry = tk.Entry(frame_params)
+outside_temp_entry.insert(0, "0")  # Default value
+outside_temp_entry.grid(row=7, column=1)
 
 tk.Label(frame_params, text="Mass of Water in Hot Water Tank in kg:").grid(row=8, column=0, sticky='e')
 mass_of_water_entry = ttk.Entry(frame_params)
@@ -452,7 +452,7 @@ frame_temperature_plot.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
 tk.Label(frame_temperature_plot, text="Tank Temperature Plot", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky='n')
 
 # Frame for Performance Metrics (including COP Plot and Energy Consumption)
-frame_performance_metrics = tk.Frame(frame_simulation, bd=2, relief=tk.GROOVE, width=400, height=400)  # Adjusted size for better fit
+frame_performance_metrics = tk.Frame(frame_simulation, bd=2, relief=tk.GROOVE, width=410, height=410)  # Adjusted size for better fit
 frame_performance_metrics.grid_propagate(False)  # Prevent resizing
 frame_performance_metrics.grid(row=2, column=0, padx=10, pady=10, sticky='nsew')
 tk.Label(frame_performance_metrics, text="Performance Metrics", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky='n')
