@@ -404,7 +404,7 @@ off_threshold_entry.grid(row=11, column=1, pady=5, padx=5)
 
 # Add the city selection dropdown
 tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
-city_var = tk.StringVar(value="Edinburgh")  # Default city is Edinburgh
+city_var = tk.StringVar(value="Please Select")  
 city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
 city_dropdown.grid(row=12, column=1, pady=5, padx=5)
 
@@ -444,7 +444,7 @@ building_types = {
           'Tank Surface Area in m² (A_tank)': 1, 'City': 'Edinburgh', 'Outside Temp': 0},
 }
 
-building_var = tk.StringVar(value='A')
+building_var = tk.StringVar(value='Please Select')
 building_dropdown = ttk.Combobox(frame_params, textvariable=building_var, values=list(building_types.keys()))
 building_dropdown.grid(row=14, column=1, pady=5, padx=5)
 building_dropdown.bind("<<ComboboxSelected>>", on_building_selection_change)
