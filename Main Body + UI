@@ -74,7 +74,7 @@ for i in cop_yaml['heat_pump_cop_data']:
 
 class Heat_system:
     
-    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t,A_cond):
         self.Aw = Aw
         self.Uw = Uw
         self.Ar = Ar
@@ -85,6 +85,7 @@ class Heat_system:
         self.T_cond = T_cond
         self.U_tank = U_tank
         self.A_tank = A_tank
+        self.A_cond = A_cond
         self.c_t = c_t
         self.pump_on = False
         self.real_cop = []  # Store calculated COP values for averaging
@@ -113,7 +114,7 @@ class Heat_system:
             self.pump_on = True
 
         if self.pump_on:
-            return 1.11 * (self.U_cond * (self.T_cond - T_tank))
+            return self.A_cond * self.U_cond * (self.T_cond - T_tank)
         else:
             return 0
 
@@ -151,13 +152,13 @@ class Heat_system:
         return time_values, T_tank_values, Q_hp_total, avg_cop
   
 # Inside your run_simulation function, pass T_amb_list after fetching it
-def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
+def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank,A_cond, c_t):
     # Ensure that T_amb_list is updated before passing it to the Heat_System
     if not T_amb_list:
         print("Temperature data not available!")
         return
     
-    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+    heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank,A_cond, c_t)
     initial_tank_temp = 318.15  # Initial tank temperature in K
     time_values, T_tank_values, Q_hp_total, avg_cop = heat_system.solve_tank_temperature(initial_tank_temp)
     
@@ -414,25 +415,25 @@ def on_building_selection_change(event):
 # Dropdown menu for Building Types
 tk.Label(frame_params, text="Building Types:").grid(row=14, column=0, sticky='e')
 building_types = {
-    'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
+    'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15, 'A_cond': 1.11
           'Mass of Water in Hot Water Tank in kg': 160, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
           'Tank Surface Area in m² (A_tank)': 0.8, 'City': 'Harbin', 'Outside Temp': 0},
-    'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
+    'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,'A_cond': 1.11
           'Mass of Water in Hot Water Tank in kg': 200, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
           'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
-    'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
+    'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,'A_cond': 1.11
           'Mass of Water in Hot Water Tank in kg': 240, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
           'Tank Surface Area in m² (A_tank)': 1.2, 'City': 'Rio', 'Outside Temp': 0},
-    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,'A_cond': 1.11
           'Mass of Water in Hot Water Tank in kg': 200, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
