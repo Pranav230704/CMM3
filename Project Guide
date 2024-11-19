@@ -1,6 +1,28 @@
 This manual will provide a guide on how to use the four code files, including the user interface.
 
 
+Navigating through the code files:
+1. Code File 1: Simulation Runner
+    - This contains the code that simulates the system by setting-up and solving the ODE.
+    - Using Code File 2, the user interface is called in to run the simulation based on the user's requirements.
+    - By running this file, the user interface can be accessed.
+2. Code File 2: UI
+    - This file contains the user interface, which is called upon in other code files to run their respective simulations.
+    - This file is not meant to be run on its own, instead it is run as a part of Code Files 1 & 3.
+3. Code File 3: Optimisation
+    - This is where optimal parameters are found for each house location
+    - Running this code will produce plots of the performance metrics against the different parameters.
+    - Each plot would print an optimal parameter value.
+4. Code File 4: Method Improvement (Hot Water Draw-off)
+    - This is where the simulation is altered to include realistic hot water usage patterns.
+    - Running this would give access to the user interface but this time with hot water draw-offs included.
+
+
+
+
+
+-----------------------------------
+
 Step-by-step guide for User Interface:
 1. Select the city in which you would like to situate the building.
 2. Click "Update temperature".
@@ -13,19 +35,3 @@ Step-by-step guide for User Interface:
 4. Select "Run Simulation"
 5. If you wish to inspect any performance metrics across the 24h period, choose one of three options under "Select Performance Metric" and then select "Run Simulation"
 
-
-Navigating through the code files:
-1. Code File 1: System Simulation
-    - This contains the code that simulates the system by setting-up and solving the ODE.
-    - Using Code File 2, the user interface is called in to run the simulation based on the user's requirements.
-    - By running this file, the user interface can be accessed.
-2. Code File 2: UI
-    - This file contains the user interface, which is called upon in other code files to run their respective simulations.
-    - This file is not meant to be run on its own, instead it is run as a part of Code Files 1 & 3.
-3. Code File 3: Optimisation
-    - This is where optimal parameters are found based on different performance metrics.
-    - Running this code will produce plots of the performance metrics against the different parameters.
-    - Each plot would print an optimal parameter value.
-4. Code File 4: Method Improvement (Hot Water Draw-off)
-    - This is where the simulation is altered to include realistic hot water usage patterns.
-    - Running this would give access to the user interface but this time with hot water draw-offs included.
