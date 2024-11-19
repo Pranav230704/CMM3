@@ -21,6 +21,7 @@ data = Hourly(location, start, end)
 data = data.fetch()
 T_amb_list = data['temp'].tolist()
 
+
 class HeatSystem:
     def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
         self.Aw = Aw
