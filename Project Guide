@@ -6,18 +6,26 @@ Navigating through the code files:
 
 1. Name: main.py
     Simulation Runner
-    - 
+    - The simuation is run here, including the user interface
+    - Run this code to open the UI
+    - Instructions on how to use the UI can be found below and in the UI itself
+    - This files calls in file 2 (heat_system.py) to obtain the tank temperature values by solving the ODE
 2. Name: heat_system.py
     Class for Heat System Simulation
     - This contains the heat system class 
     - This file is called upon by code file 1 (main.py) to run the simulation
     - File not inteded to be run on its own
 3. Name: Optimisation
-    - This is where optimal parameters are found for each house location
-    - 
+    - This is where optimal parameters were found for each house location
+    - Running this code will print the optimal set of parameters for the location set at the start of the code
+    - The total energy consumption of the optimal tank/house system is also printed
 4. Name: Method Improvement
-    - This is where the simulation is altered to include realistic hot water usage patterns.
-    - 
+    - This is where the simulation was altered to include realistic hot water usage patterns.
+    - Running this code will produce plots of tank temperature against time for each of the days:
+        1) a typical weekday
+        2) Saturday
+        3) a holiday such as Christmas
+    - For comparison, a plot of tank temperature vs time is also given for the system before altering for hot water usage patterns
 
 
 Step-by-step guide for User Interface (this is also shown in the UI itself to refer back between steps if necessary):
