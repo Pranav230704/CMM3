@@ -6,8 +6,6 @@ Created on Wed Oct  9 11:25:14 2024
 """
 
 import numpy as np
-import yaml
-from scipy.optimize import curve_fit
 from datetime import datetime
 from meteostat import Point, Hourly
 from scipy.integrate import solve_ivp
@@ -22,13 +20,6 @@ end = datetime(2023, 1, 2, 0)    # End time (24-hour period)
 data = Hourly(location, start, end)
 data = data.fetch()
 T_amb_list = data['temp'].tolist()
-
-# Load COP data from YAML file
-file_path1 = r'/Users/aydannevzat1/Desktop/heat_pump_cop_synthetic_full.yaml'
-with open(file_path1, 'r') as file:
-    cop_yaml = yaml.safe_load(file)
-cop_temp = [i['outdoor_temp_C'] for i in cop_yaml['heat_pump_cop_data']]
-cop_cop = [i['COP_noisy'] for i in cop_yaml['heat_pump_cop_data']]
 
 class HeatSystem:
     def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
