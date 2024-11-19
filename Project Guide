@@ -1,4 +1,6 @@
+
 This manual will provide a guide on how to use the four code files, including the user interface.
+
 
 Navigating through the code files:
 
@@ -18,21 +20,20 @@ Navigating through the code files:
     - 
 
 
-
-
-
------------------------------------
-
 Step-by-step guide for User Interface (this is also shown in the UI itself to refer back between steps if necessary):
 
-1. Select the city in which you would like to situate the building.
-2. Click "Update temperature".
-3. Select one of the buildings to set the appropriate system parameters:
-    Building A: a well-insulated, smaller home.
-    Building B: a moderately insulated, medium-sized home.
-    Building C: a poorly-insulated, larger house.
-    Building D: the default building given in the ‘input.yaml’ file.
-    Alternatively, manually enter the desired parameters.
-4. Select "Run Simulation"
-5. If you wish to inspect any performance metrics across the 24h period, choose one of three options under "Select Performance Metric" and then select "Run Simulation"
+1) Select one of the preset buildings (via the dropdown menu) to set the appropriate system parameters:
+    
+    House A: A well-insulated, smaller home.
+    House B: A moderately insulated, medium-sized home.
+    House C: A poorly-insulated, larger house.
+    YAML: The default building configuration.
+    
+    The inputs will be automatically filled based on the selected building.
+    
+2) You can edit the parameters to suit your needs. If you change the city for outside temperature, click 'Update Temperature' to refresh the temperature values.
+
+3) Click the 'Run Simulation' button to simulate the heat pump performance and see the results.
+    
+4) If you wish to start again, click reset and everything will be set to 0 for you to input values again
 
