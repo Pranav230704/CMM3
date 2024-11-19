@@ -112,9 +112,9 @@ def create_user_manual():
 
 1) Select one of the preset buildings (via the dropdown menu) to set the appropriate system parameters:
     
-    Building A: A well-insulated, smaller home.
-    Building B: A moderately insulated, medium-sized home.
-    Building C: A poorly-insulated, larger house.
+    House A: A well-insulated, smaller home.
+    House B: A moderately insulated, medium-sized home.
+    House C: A poorly-insulated, larger house.
     YAML: The default building configuration.
     
     The inputs will be automatically filled based on the selected building.
@@ -165,9 +165,9 @@ def reset_fields():
     outside_temp_entry.delete(0, tk.END)
     outside_temp_entry.insert(0, "0")
     
-    # Clear city selection and building type selection
-    city_var.set("Edinburgh")
-    building_var.set("A")
+    # Clear city selection and house type selection
+    city_var.set("Please Select")
+    house_var.set("Please Select")
     
     # Clear the plots
     for widget in frame_temperature_plot.winfo_children():
@@ -306,11 +306,11 @@ city_dropdown.grid(row=12, column=1, pady=5, padx=5)
 tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
 
 # Automatically update parameters when city selection changes
-def on_building_selection_change(event):
+def on_house_selection_change(event):
     set_parameters(building_types[building_var.get()])
 
 # Dropdown menu for Building Types
-tk.Label(frame_params, text="Building Types:").grid(row=14, column=0, sticky='e')
+tk.Label(frame_params, text="House Type:").grid(row=14, column=0, sticky='e')
 building_types = {
     'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
           'Mass of Water in Hot Water Tank in kg': 160, 
@@ -338,10 +338,10 @@ building_types = {
           'Tank Surface Area in m² (A_tank)': 1, 'City': 'Edinburgh', 'Outside Temp': 0},
 }
 
-building_var = tk.StringVar(value='Please Select')
-building_dropdown = ttk.Combobox(frame_params, textvariable=building_var, values=list(building_types.keys()))
-building_dropdown.grid(row=14, column=1, pady=5, padx=5)
-building_dropdown.bind("<<ComboboxSelected>>", on_building_selection_change)
+house_var = tk.StringVar(value='Please Select')
+house_dropdown = ttk.Combobox(frame_params, textvariable=house_var, values=list(house_types.keys()))
+house_dropdown.grid(row=14, column=1, pady=5, padx=5)
+house_dropdown.bind("<<ComboboxSelected>>", on_house_selection_change)
 
 # Frame for running simulation
 frame_simulation = tk.Frame(root, bd=2, relief=tk.GROOVE)  # Added border for separation
