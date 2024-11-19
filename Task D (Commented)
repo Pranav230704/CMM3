@@ -46,7 +46,7 @@ class HeatSystem:
         # calculate heat load based on building characteristics and ambient temperature
         Q_loads = []
         for i, Tamb in enumerate(self.T_amb_list):
-            # different profiles for weekdays, saturdays, holidays, or custom scenarios
+            # different profiles for weekdays, saturdays, holiday
             if day_type == 'weekday':
                 if 7 <= i <= 9:
                     # higher load during morning peak (7-9 am)
@@ -66,7 +66,7 @@ class HeatSystem:
                 else:
                     Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
             elif day_type == 'holiday':
-                # load profile for holidays
+                # load profile for holiday
                 if 9 <= i <= 10:
                     Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1500
                 elif 10 <= i <= 13:
@@ -105,8 +105,8 @@ class HeatSystem:
         # solve the ODE for tank temperature over a 24-hour period
         t_eval = np.linspace(0, total_time, time_points)  # define evaluation points for time
         solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp],
-                             args=(day_type,), t_eval=t_eval, method="RK45", max_step=100)  # solve ODE using Runge-Kutta method
-        T_tank_values = solution.y[0] - 273.15  # convert temperatures from Kelvin to Celsius
+                             args=(day_type,), t_eval=t_eval, method="RK45", max_step=100)  # solve ODE (Runge-Kutta method)
+        T_tank_values = solution.y[0] - 273.15  # convert temperatures
         time_values = solution.t  # extract time values from solution
         return time_values, T_tank_values
 
@@ -144,15 +144,15 @@ def main():
         # plot tank temperature over time for each day type
         time_values, T_tank_values = results[day_type]
         axs[i].plot(time_values / 3600, T_tank_values, label=f'{day_type.capitalize()} Tank Temperature')
-        axs[i].axhline(y=40, color='b', linestyle='--', label='Lower Limit (40°C)')  # plot lower temperature limit
-        axs[i].axhline(y=60, color='r', linestyle='--', label='Upper Limit (60°C)')  # plot upper temperature limit
-        axs[i].set_xlabel('Time (hours)', fontsize=12, fontweight='bold')  # label x-axis
-        axs[i].set_ylabel('Tank Temperature (°C)', fontsize=9, fontweight='bold')  # label y-axis
-        axs[i].set_title(f'Tank Temperature Over Time - {day_type.capitalize()}', fontsize=11)  # title of subplot
-        axs[i].set_xlim([0, 24])  # set x-axis limits (0 to 24 hours)
-        axs[i].set_xticks(np.arange(0, 25, 4))  # set x-axis ticks at every 4 hours
-        axs[i].set_xticklabels([str(x) for x in range(0, 25, 4)])  # convert tick values to strings
-        axs[i].set_ylim(bottom=38)  # set minimum y-axis value to avoid negative temperatures
+        axs[i].axhline(y=40, color='b', linestyle='--', label='Lower Limit (40°C)')  # lower temperature limit
+        axs[i].axhline(y=60, color='r', linestyle='--', label='Upper Limit (60°C)')  # upper temperature limit
+        axs[i].set_xlabel('Time (hours)', fontsize=12, fontweight='bold')
+        axs[i].set_ylabel('Tank Temperature (°C)', fontsize=9, fontweight='bold')
+        axs[i].set_title(f'Tank Temperature Over Time - {day_type.capitalize()}', fontsize=11) 
+        axs[i].set_xlim([0, 24])  # set x-axis limits
+        axs[i].set_xticks(np.arange(0, 25, 4))
+        axs[i].set_xticklabels([str(x) for x in range(0, 25, 4)])
+        axs[i].set_ylim(bottom=38)  # set minimum y-axis value
         axs[i].legend()  # display legend
         axs[i].grid(True)  # display grid lines
 
