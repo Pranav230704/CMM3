@@ -40,10 +40,10 @@ class Heat_system:
         self.cop_values = []  # to store COP values over time
 
     def Q_load(self):
-        # calculate heat load based on building characteristics and ambient temperature
+        # calculate heat load based on house characteristics and ambient temperature
         Q_loads = []
         for Tamb in self.T_amb_list:
-            # heat load calculated using building envelope parameters (negative because heat is leaving)
+            # heat load calculated using house envelope parameters (negative because heat is leaving)
             Q_load = (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) * -1
             Q_loads.append(Q_load)
         return Q_loads
