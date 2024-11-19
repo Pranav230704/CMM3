@@ -307,11 +307,11 @@ tk.Button(frame_params, text="Update Temperature", command=update_temperature).g
 
 # Automatically update parameters when city selection changes
 def on_house_selection_change(event):
-    set_parameters(building_types[building_var.get()])
+    set_parameters(house_types[house_var.get()])
 
 # Dropdown menu for Building Types
 tk.Label(frame_params, text="House Type:").grid(row=14, column=0, sticky='e')
-building_types = {
+house_types = {
     'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
           'Mass of Water in Hot Water Tank in kg': 160, 
           'Initial Tank Temperature in K': 318.15,
