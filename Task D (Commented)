@@ -1,0 +1,164 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct  9 11:25:14 2024
+
+@author: Group 6
+
+This script simulates the operation of a heat pump system and hot water tank under different daily conditions.
+The code is designed to evaluate the effects of various parameters on tank temperature over a 24-hour period.
+Limitations: The hot water tank is treated as a single, uniform temperature reservoir, ignoring stratification effects.
+"""
+
+import numpy as np
+from datetime import datetime
+from meteostat import Point, Hourly
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Define the location (Edinburgh: 55.9533° N, 3.1883° W)
+location = Point(55.9533, -3.1883)  # specify the location to get weather data (outdoor temperature)
+# Set the time period for data retrieval
+start = datetime(2023, 1, 1, 0)  # start time for weather data (midnight)
+end = datetime(2023, 1, 2, 0)    # end time for weather data (24-hour period)
+# Fetch hourly temperature data
+data = Hourly(location, start, end)  # get hourly temperature data from Meteostat
+data = data.fetch()
+T_amb_list = data['temp'].tolist()  # convert the temperature data to a list
+
+
+class HeatSystem:
+    def __init__(self, Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t):
+        # initializing system properties like areas, U-values, temperatures, etc.
+        self.Aw = Aw
+        self.Uw = Uw
+        self.Ar = Ar
+        self.Ur = Ur
+        self.T_amb_list = T_amb_list  # list of ambient temperatures for 24 hours
+        self.T_sp = T_sp  # set point temperature for indoor environment
+        self.U_cond = U_cond  # heat transfer coefficient for condenser
+        self.T_cond = T_cond  # fixed condenser temperature
+        self.U_tank = U_tank  # heat transfer coefficient for the tank
+        self.A_tank = A_tank  # surface area of the tank
+        self.c_t = c_t  # thermal capacity of the tank
+        self.pump_on = False  # state of the heat pump (on or off)
+
+    def Q_load(self, day_type='weekday'):
+        # calculate heat load based on building characteristics and ambient temperature
+        Q_loads = []
+        for i, Tamb in enumerate(self.T_amb_list):
+            # different profiles for weekdays, saturdays, holidays, or custom scenarios
+            if day_type == 'weekday':
+                if 7 <= i <= 9:
+                    # higher load during morning peak (7-9 am)
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1800
+                elif 17 <= i <= 20:
+                    # higher load during evening peak (5-8 pm)
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1500
+                else:
+                    # base load calculation for other hours
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
+            elif day_type == 'saturday':
+                # different load profile for saturdays
+                if 9 <= i <= 11:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 2000
+                elif 18 <= i <= 21:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1600
+                else:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
+            elif day_type == 'holiday':
+                # load profile for holidays
+                if 9 <= i <= 10:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1500
+                elif 10 <= i <= 13:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 3000
+                elif 15 <= i <= 17:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp)) + 1000
+                else:
+                    Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
+            elif day_type == 'before hot-water adjustment':
+                # load before hot-water adjustment
+                Q_load = -1 * (self.Aw * self.Uw * (Tamb + 273 - self.T_sp) + self.Ar * self.Ur * (Tamb + 273 - self.T_sp))
+            Q_loads.append(Q_load)
+        return Q_loads
+
+    def Q_hp(self, T_tank):
+        # calculate the heat supplied by the heat pump based on tank temperature
+        if T_tank >= 60 + 273.15:
+            self.pump_on = False  # turn off pump when tank temperature exceeds upper limit
+        elif T_tank <= 40 + 273.15:
+            self.pump_on = True  # turn on pump when tank temperature drops below lower limit
+        if self.pump_on:
+            return self.U_cond * 1.11 * (self.T_cond - T_tank)  # heat supplied by the condenser
+        else:
+            return 0  # no heat supplied if pump is off
+
+    def tank_temperature_ode(self, t, T_tank, day_type):
+        # ordinary differential equation for tank temperature dynamics
+        Q_hp = self.Q_hp(T_tank)  # heat supplied by heat pump
+        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load(day_type))), self.Q_load(day_type))  # interpolate load over time
+        T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # interpolate ambient temperature over time
+        Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)  # heat loss from tank to environment
+        dTdt = (Q_hp - Load - Q_loss) / self.c_t  # rate of change of tank temperature
+        return dTdt
+
+    def solve_tank_temperature(self, initial_tank_temp, day_type, total_time=86400, time_points=1000):
+        # solve the ODE for tank temperature over a 24-hour period
+        t_eval = np.linspace(0, total_time, time_points)  # define evaluation points for time
+        solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp],
+                             args=(day_type,), t_eval=t_eval, method="RK45", max_step=100)  # solve ODE using Runge-Kutta method
+        T_tank_values = solution.y[0] - 273.15  # convert temperatures from Kelvin to Celsius
+        time_values = solution.t  # extract time values from solution
+        return time_values, T_tank_values
+
+
+def main():
+    # set initial parameters for the heat pump system
+    Aw = 132  # wall area (m^2)
+    Uw = 0.51  # wall U-value (W/m^2K)
+    Ar = 120  # roof area (m^2)
+    Ur = 0.18  # roof U-value (W/m^2K)
+    T_sp = 293.15  # indoor set point temperature (K)
+    U_cond = 300  # condenser heat transfer coefficient (W/m^2K)
+    T_cond = 343.15  # condenser temperature (K)
+    U_tank = 5  # tank heat transfer coefficient (W/m^2K)
+    A_tank = 1  # tank surface area (m^2)
+    c_t = 837200  # thermal capacity of tank (J/K)
+    initial_tank_temp = 45 + 273.15  # initial tank temperature (K)
+
+    # create an instance of HeatSystem with the parameters
+    heat_system = HeatSystem(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t)
+
+    day_types = ['weekday', 'saturday', 'holiday', 'before hot-water adjustment']  # define types of days to simulate
+    results = {}
+
+    for day_type in day_types:
+        # solve the tank temperature for each day type
+        time_values, T_tank_values = heat_system.solve_tank_temperature(initial_tank_temp, day_type)
+        results[day_type] = (time_values, T_tank_values)
+
+    # Plot each day type in a subplot
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+    axs = axs.flatten()
+
+    for i, day_type in enumerate(day_types):
+        # plot tank temperature over time for each day type
+        time_values, T_tank_values = results[day_type]
+        axs[i].plot(time_values / 3600, T_tank_values, label=f'{day_type.capitalize()} Tank Temperature')
+        axs[i].axhline(y=40, color='b', linestyle='--', label='Lower Limit (40°C)')  # plot lower temperature limit
+        axs[i].axhline(y=60, color='r', linestyle='--', label='Upper Limit (60°C)')  # plot upper temperature limit
+        axs[i].set_xlabel('Time (hours)', fontsize=12, fontweight='bold')  # label x-axis
+        axs[i].set_ylabel('Tank Temperature (°C)', fontsize=9, fontweight='bold')  # label y-axis
+        axs[i].set_title(f'Tank Temperature Over Time - {day_type.capitalize()}', fontsize=11)  # title of subplot
+        axs[i].set_xlim([0, 24])  # set x-axis limits (0 to 24 hours)
+        axs[i].set_xticks(np.arange(0, 25, 4))  # set x-axis ticks at every 4 hours
+        axs[i].set_xticklabels([str(x) for x in range(0, 25, 4)])  # convert tick values to strings
+        axs[i].set_ylim(bottom=38)  # set minimum y-axis value to avoid negative temperatures
+        axs[i].legend()  # display legend
+        axs[i].grid(True)  # display grid lines
+
+    plt.tight_layout()  # adjust spacing to prevent overlap
+    plt.show()  # display the plot
+
+
+if __name__ == "__main__":
+    main()  # run the main function
