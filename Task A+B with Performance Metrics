@@ -2,7 +2,7 @@
 """
 Created on Wed Oct  9 11:25:14 2024
 
-@author: Raymond M Rothschild
+@author: Group 6
 """
 import numpy as np
 import yaml
