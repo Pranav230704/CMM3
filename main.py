@@ -47,6 +47,137 @@ def update_temperature():
     else:
         print(f"Failed to fetch temperature data for {selected_city}.")
 
+# Tkinter UI creation code
+root = tk.Tk()
+root.title("Heat Pump Simulation")
+root.geometry("1400x800")
+root.state('zoomed')
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
+
+# Frame for Parameters
+frame_params = tk.Frame(root, bd=2, relief=tk.GROOVE)
+frame_params.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)
+
+frame_params_title = tk.Label(frame_params, text="Inputs", font=("Arial", 16, "bold"))
+frame_params_title.grid(row=0, column=0, columnspan=2, pady=10)
+
+# Modify the set_parameters function to also set the 'Outside Temp' value
+def set_parameters(params):
+    # Define the entries and corresponding parameter keys
+    entries = [
+        (Aw_entry, 'Aw'),
+        (Uw_entry, 'Uw'),
+        (Ar_entry, 'Ar'),
+        (Ur_entry, 'Ur'),
+        (T_sp_entry, 'T_sp'),
+        (mass_of_water_entry, 'Mass of Water in Hot Water Tank in kg'),
+        (initial_tank_temp_entry, 'Initial Tank Temperature in K'),
+        (on_threshold_entry, 'Heat Pump On Threshold in K'),
+        (off_threshold_entry, 'Heat Pump Off Threshold in K'),
+        (A_tank_entry, 'Tank Surface Area in m² (A_tank)')
+    ]
+
+    # Update each entry using the corresponding value in params
+    for entry, key in entries:
+        entry.delete(0, tk.END)
+        entry.insert(0, params.get(key, "0"))
+
+    # Set the City value (for use in fetching outside temperature)
+    city_var.set(params['City'])
+
+    # Fetch and display outside temperature for the city
+    outside_temp = update_temperature_display(params['City'])
+    # Update the outside temperature entry field
+    outside_temp_entry.delete(0, tk.END)
+    outside_temp_entry.insert(0, outside_temp)
+
+# Parameter labels and entries
+parameters = [
+    ("Wall Area in m² (Aw):", "0", "Aw_entry"),
+    ("Wall U-value in W/m²K (Uw):", "0", "Uw_entry"),
+    ("Roof Area in m² (Ar):", "0", "Ar_entry"),
+    ("Roof U-value in W/m²K (Ur):", "0", "Ur_entry"),
+    ("Set Point Temperature in K (T_sp):", "0", "T_sp_entry"),
+    ("Tank Surface Area in m² (A_tank):", "0", "A_tank_entry"),
+    ("Outside Temperature in °C (T_amb):", "0", "outside_temp_entry"),
+    ("Mass of Water in Hot Water Tank in kg:", "0", "mass_of_water_entry"),
+    ("Initial Tank Temperature in K:", "0", "initial_tank_temp_entry"),
+    ("Heat Pump On Threshold in K:", "0", "on_threshold_entry"),
+    ("Heat Pump Off Threshold in K:", "0", "off_threshold_entry"),
+]
+
+# Dictionary to store entry widgets by name
+entries_dict = {}
+
+# Create labels and entries dynamically
+for i, (label_text, default_value, entry_name) in enumerate(parameters, start=1):
+    tk.Label(frame_params, text=label_text).grid(row=i, column=0, sticky='e')
+    entry = ttk.Entry(frame_params)
+    entry.insert(0, default_value)
+    entry.grid(row=i, column=1, pady=5, padx=5)
+    entries_dict[entry_name] = entry
+
+# Add the city selection dropdown
+tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
+city_var = tk.StringVar(value="Please Select")  
+city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
+city_dropdown.grid(row=12, column=1, pady=5, padx=5)
+
+# Update temperature button
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
+
+# Access entry widgets using entries_dict['entry_name']
+Aw_entry = entries_dict['Aw_entry']
+Uw_entry = entries_dict['Uw_entry']
+Ar_entry = entries_dict['Ar_entry']
+Ur_entry = entries_dict['Ur_entry']
+T_sp_entry = entries_dict['T_sp_entry']
+A_tank_entry = entries_dict['A_tank_entry']
+outside_temp_entry = entries_dict['outside_temp_entry']
+mass_of_water_entry = entries_dict['mass_of_water_entry']
+initial_tank_temp_entry = entries_dict['initial_tank_temp_entry']
+on_threshold_entry = entries_dict['on_threshold_entry']
+off_threshold_entry = entries_dict['off_threshold_entry']
+
+# Automatically update parameters when city selection changes
+def on_house_selection_change(event):
+    set_parameters(house_types[house_var.get()])
+
+# Dropdown menu for Building Types
+tk.Label(frame_params, text="House Type:").grid(row=14, column=0, sticky='e')
+house_types = {
+    'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
+          'Mass of Water in Hot Water Tank in kg': 160, 
+          'Initial Tank Temperature in K': 318.15,
+          'Heat Pump On Threshold in K': 313.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)': 0.8, 'City': 'Harbin', 'Outside Temp': 0},
+    'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
+          'Mass of Water in Hot Water Tank in kg': 200,
+          'Initial Tank Temperature in K': 318.15,
+          'Heat Pump On Threshold in K': 313.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
+    'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
+          'Mass of Water in Hot Water Tank in kg': 240, 
+          'Initial Tank Temperature in K': 318.15,
+          'Heat Pump On Threshold in K': 313.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)': 1.2, 'City': 'Rio de Janeiro', 'Outside Temp': 0},
+    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+          'Mass of Water in Hot Water Tank in kg': 200, 
+          'Initial Tank Temperature in K': 318.15,
+          'Heat Pump On Threshold in K': 313.15, 
+          'Heat Pump Off Threshold in K': 333.15,
+          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Edinburgh', 'Outside Temp': 0},
+}
+
+house_var = tk.StringVar(value='Please Select')
+house_dropdown = ttk.Combobox(frame_params, textvariable=house_var, values=list(house_types.keys()))
+house_dropdown.grid(row=14, column=1, pady=5, padx=5)
+house_dropdown.bind("<<ComboboxSelected>>", on_house_selection_change)
+
 # Function to run the simulation
 def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, A_cond):
     if not T_amb_list:
@@ -96,13 +227,7 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, A_
     energy_label.config(text=f"Total Energy Consumption: {Q_hp_total / 3.6e6:.2f} kWh")
     avg_cop_label.config(text=f"Average COP: {avg_cop:.2f}")
 
-# Tkinter UI creation code
-root = tk.Tk()
-root.title("Heat Pump Simulation")
-root.geometry("1400x800")
-root.state('zoomed')
-root.grid_rowconfigure(0, weight=1)
-root.grid_columnconfigure(0, weight=1)
+
 
 def create_user_manual():
     user_manual = """
@@ -194,130 +319,6 @@ def update_temperature_display(city_name):
     else:
         print(f"Failed to fetch temperature data for {city_name}.")
         return 0
-
-# Modify the set_parameters function to also set the 'Outside Temp' value
-def set_parameters(params):
-    # Define the entries and corresponding parameter keys
-    entries = [
-        (Aw_entry, 'Aw'),
-        (Uw_entry, 'Uw'),
-        (Ar_entry, 'Ar'),
-        (Ur_entry, 'Ur'),
-        (T_sp_entry, 'T_sp'),
-        (mass_of_water_entry, 'Mass of Water in Hot Water Tank in kg'),
-        (initial_tank_temp_entry, 'Initial Tank Temperature in K'),
-        (on_threshold_entry, 'Heat Pump On Threshold in K'),
-        (off_threshold_entry, 'Heat Pump Off Threshold in K'),
-        (A_tank_entry, 'Tank Surface Area in m² (A_tank)')
-    ]
-
-    # Update each entry using the corresponding value in params
-    for entry, key in entries:
-        entry.delete(0, tk.END)
-        entry.insert(0, params.get(key, "0"))
-
-    # Set the City value (for use in fetching outside temperature)
-    city_var.set(params['City'])
-
-    # Fetch and display outside temperature for the city
-    outside_temp = update_temperature_display(params['City'])
-    # Update the outside temperature entry field
-    outside_temp_entry.delete(0, tk.END)
-    outside_temp_entry.insert(0, outside_temp)
-
-
-# Frame for Parameters
-frame_params = tk.Frame(root, bd=2, relief=tk.GROOVE)
-frame_params.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)
-
-frame_params_title = tk.Label(frame_params, text="Inputs", font=("Arial", 16, "bold"))
-frame_params_title.grid(row=0, column=0, columnspan=2, pady=10)
-
-# Parameter labels and entries
-parameters = [
-    ("Wall Area in m² (Aw):", "0", "Aw_entry"),
-    ("Wall U-value in W/m²K (Uw):", "0", "Uw_entry"),
-    ("Roof Area in m² (Ar):", "0", "Ar_entry"),
-    ("Roof U-value in W/m²K (Ur):", "0", "Ur_entry"),
-    ("Set Point Temperature in K (T_sp):", "0", "T_sp_entry"),
-    ("Tank Surface Area in m² (A_tank):", "0", "A_tank_entry"),
-    ("Outside Temperature in °C (T_amb):", "0", "outside_temp_entry"),
-    ("Mass of Water in Hot Water Tank in kg:", "0", "mass_of_water_entry"),
-    ("Initial Tank Temperature in K:", "0", "initial_tank_temp_entry"),
-    ("Heat Pump On Threshold in K:", "0", "on_threshold_entry"),
-    ("Heat Pump Off Threshold in K:", "0", "off_threshold_entry"),
-]
-
-# Dictionary to store entry widgets by name
-entries_dict = {}
-
-# Create labels and entries dynamically
-for i, (label_text, default_value, entry_name) in enumerate(parameters, start=1):
-    tk.Label(frame_params, text=label_text).grid(row=i, column=0, sticky='e')
-    entry = ttk.Entry(frame_params)
-    entry.insert(0, default_value)
-    entry.grid(row=i, column=1, pady=5, padx=5)
-    entries_dict[entry_name] = entry
-
-# Add the city selection dropdown
-tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
-city_var = tk.StringVar(value="Please Select")  
-city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
-city_dropdown.grid(row=12, column=1, pady=5, padx=5)
-
-# Update temperature button
-tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
-
-# Access entry widgets using entries_dict['entry_name']
-Aw_entry = entries_dict['Aw_entry']
-Uw_entry = entries_dict['Uw_entry']
-Ar_entry = entries_dict['Ar_entry']
-Ur_entry = entries_dict['Ur_entry']
-T_sp_entry = entries_dict['T_sp_entry']
-A_tank_entry = entries_dict['A_tank_entry']
-outside_temp_entry = entries_dict['outside_temp_entry']
-mass_of_water_entry = entries_dict['mass_of_water_entry']
-initial_tank_temp_entry = entries_dict['initial_tank_temp_entry']
-on_threshold_entry = entries_dict['on_threshold_entry']
-off_threshold_entry = entries_dict['off_threshold_entry']
-
-# Automatically update parameters when city selection changes
-def on_house_selection_change(event):
-    set_parameters(house_types[house_var.get()])
-
-# Dropdown menu for Building Types
-tk.Label(frame_params, text="House Type:").grid(row=14, column=0, sticky='e')
-house_types = {
-    'A': {'Aw': 85, 'Uw': 0.4, 'Ar': 80, 'Ur': 0.15, 'T_sp': 288.15,
-          'Mass of Water in Hot Water Tank in kg': 160, 
-          'Initial Tank Temperature in K': 318.15,
-          'Heat Pump On Threshold in K': 313.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 0.8, 'City': 'Harbin', 'Outside Temp': 0},
-    'B': {'Aw': 135, 'Uw': 0.6, 'Ar': 120, 'Ur': 0.25, 'T_sp': 298.15,
-          'Mass of Water in Hot Water Tank in kg': 200,
-          'Initial Tank Temperature in K': 318.15,
-          'Heat Pump On Threshold in K': 313.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Nairobi', 'Outside Temp': 0},
-    'C': {'Aw': 180, 'Uw': 0.8, 'Ar': 160, 'Ur': 0.3, 'T_sp': 303.15,
-          'Mass of Water in Hot Water Tank in kg': 240, 
-          'Initial Tank Temperature in K': 318.15,
-          'Heat Pump On Threshold in K': 313.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1.2, 'City': 'Rio de Janeiro', 'Outside Temp': 0},
-    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
-          'Mass of Water in Hot Water Tank in kg': 200, 
-          'Initial Tank Temperature in K': 318.15,
-          'Heat Pump On Threshold in K': 313.15, 
-          'Heat Pump Off Threshold in K': 333.15,
-          'Tank Surface Area in m² (A_tank)': 1, 'City': 'Edinburgh', 'Outside Temp': 0},
-}
-
-house_var = tk.StringVar(value='Please Select')
-house_dropdown = ttk.Combobox(frame_params, textvariable=house_var, values=list(house_types.keys()))
-house_dropdown.grid(row=14, column=1, pady=5, padx=5)
-house_dropdown.bind("<<ComboboxSelected>>", on_house_selection_change)
 
 # Frame for running simulation
 frame_simulation = tk.Frame(root, bd=2, relief=tk.GROOVE)  # Added border for separation
