@@ -8,6 +8,7 @@ Navigating through the code files:
     Simulation Runner
     - The simuation is run here, including the user interface
     - Run this code to open the UI
+    - After running the code, the UI will open as a window in the taskbar. Click the icon to open the UI.
     - Instructions on how to use the UI can be found below and in the UI itself
     - This files calls in file 2 (heat_system.py) to obtain the tank temperature values by solving the ODE
 2. Name: heat_system.py
