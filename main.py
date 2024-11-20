@@ -1,4 +1,15 @@
-# This file will include the UI and calls in the heat_system.py code to perofrm the calculation behind the code
+# Heat Pump Simulation Application
+
+# Capabilities:
+# - Provides a GUI for simulating a heat pump system.
+# - Allows users to select building parameters and fetch external temperature data.
+# - Simulates and visualizes tank temperature changes over time.
+# - Displays performance metrics.
+
+# Limitations:
+# - Temperature data is limited to pre-fetched values for selected cities.
+# - Simulation that may not account for all real-world variables.
+# - Only one date is provided.
 
 import tkinter as tk
 from tkinter import ttk
