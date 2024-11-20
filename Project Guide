@@ -12,8 +12,9 @@ Navigating through the code files:
     - This files calls in file 2 (heat_system.py) to obtain the tank temperature values by solving the ODE
 2. Name: heat_system.py
     Class for Heat System Simulation
-    - This contains the heat system class 
+    - This contains the heat system class, which sets up, solves the ODE and calculates the performance metrics
     - This file is called upon by code file 1 (main.py) to run the simulation
+    - Contains .yaml file. Please change the filepath accordingly here in this code
     - File not inteded to be run on its own
 3. Name: Optimisation
     - This is where optimal parameters were found for each house location
@@ -44,4 +45,7 @@ Step-by-step guide for User Interface (this is also shown in the UI itself to re
 3) Click the 'Run Simulation' button to simulate the heat pump performance and see the results.
     
 4) If you wish to start again, click reset and everything will be set to 0 for you to input values again
+
+
+*** The user interface was originally designed to be presented on a MacBook. However, it has been altered to be user friendly on all platforms as best as possible.
 
