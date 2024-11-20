@@ -25,7 +25,7 @@ data = data.fetch()
 T_amb_list = data['temp'].tolist()  # list of ambient temperatures
 
 # open the yaml file containing COP data for the heat pump
-file_path1 = r'/Users/aydannevzat1/Desktop/heat_pump_cop_synthetic_full.yaml'
+file_path1 = r'/example/filepath/group6/heat_pump_cop_synthetic_full.yaml' # this is an example filepath, please change it accordingly
 with open(file_path1, 'r') as file:
     cop_yaml = yaml.safe_load(file)
 
