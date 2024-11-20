@@ -231,7 +231,7 @@ def create_user_manual():
 
     This tool allows you to model and analyze the behavior of a heat pump system based on various parameters. Below is a step-by-step guide to help you get started.
 
-1) Select one of the preset buildings (via the dropdown menu) to set the appropriate system parameters:
+1) Select one of the preset houses (via the dropdown menu) to set the appropriate system parameters:
     
     House A: A well-insulated, smaller home.
     House B: A moderately insulated, medium-sized home.
