@@ -131,7 +131,7 @@ def create_user_manual():
     manual_label = tk.Label(manual_frame, text="User Manual", font=("Arial", 16, "bold"))
     manual_label.grid(row=0, column=0, sticky='n')
 
-    manual_text = tk.Text(manual_frame, height=35, width=50, wrap=tk.WORD)
+    manual_text = tk.Text(manual_frame, height=30, width=55, wrap=tk.WORD)
     manual_text.insert(tk.END, user_manual)
     manual_text.config(state=tk.DISABLED)  # Make the text widget read-only
     manual_text.grid(row=1, column=0, sticky='nsew')
@@ -197,39 +197,34 @@ def update_temperature_display(city_name):
 
 # Modify the set_parameters function to also set the 'Outside Temp' value
 def set_parameters(params):
-    Aw_entry.delete(0, tk.END)
-    Aw_entry.insert(0, params['Aw'])
-    Uw_entry.delete(0, tk.END)
-    Uw_entry.insert(0, params['Uw'])
-    Ar_entry.delete(0, tk.END)
-    Ar_entry.insert(0, params['Ar'])
-    Ur_entry.delete(0, tk.END)
-    Ur_entry.insert(0, params['Ur'])
-    T_sp_entry.delete(0, tk.END)
-    T_sp_entry.insert(0, params['T_sp'])
-    mass_of_water_entry.delete(0, tk.END)
-    mass_of_water_entry.insert(0, params['Mass of Water in Hot Water Tank in kg'])
-    
-    initial_tank_temp_entry.delete(0, tk.END)
-    initial_tank_temp_entry.insert(0, params['Initial Tank Temperature in K'])
-    
-    on_threshold_entry.delete(0, tk.END)
-    on_threshold_entry.insert(0, params['Heat Pump On Threshold in K'])
-    
-    off_threshold_entry.delete(0, tk.END)
-    off_threshold_entry.insert(0, params['Heat Pump Off Threshold in K'])
-    
-    A_tank_entry.delete(0, tk.END)
-    A_tank_entry.insert(0, params['Tank Surface Area in m² (A_tank)'])
-    
+    # Define the entries and corresponding parameter keys
+    entries = [
+        (Aw_entry, 'Aw'),
+        (Uw_entry, 'Uw'),
+        (Ar_entry, 'Ar'),
+        (Ur_entry, 'Ur'),
+        (T_sp_entry, 'T_sp'),
+        (mass_of_water_entry, 'Mass of Water in Hot Water Tank in kg'),
+        (initial_tank_temp_entry, 'Initial Tank Temperature in K'),
+        (on_threshold_entry, 'Heat Pump On Threshold in K'),
+        (off_threshold_entry, 'Heat Pump Off Threshold in K'),
+        (A_tank_entry, 'Tank Surface Area in m² (A_tank)')
+    ]
+
+    # Update each entry using the corresponding value in params
+    for entry, key in entries:
+        entry.delete(0, tk.END)
+        entry.insert(0, params.get(key, "0"))
+
     # Set the City value (for use in fetching outside temperature)
     city_var.set(params['City'])
-    
+
     # Fetch and display outside temperature for the city
     outside_temp = update_temperature_display(params['City'])
     # Update the outside temperature entry field
     outside_temp_entry.delete(0, tk.END)
     outside_temp_entry.insert(0, outside_temp)
+
 
 # Frame for Parameters
 frame_params = tk.Frame(root, bd=2, relief=tk.GROOVE)
@@ -238,63 +233,31 @@ frame_params.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)
 frame_params_title = tk.Label(frame_params, text="Inputs", font=("Arial", 16, "bold"))
 frame_params_title.grid(row=0, column=0, columnspan=2, pady=10)
 
-# Parameter Entry Labels and Fields
-tk.Label(frame_params, text="Wall Area in m² (Aw):").grid(row=1, column=0, sticky='e')
-Aw_entry = ttk.Entry(frame_params)
-Aw_entry.insert(0, "0")  # Starting value
-Aw_entry.grid(row=1, column=1, pady=5, padx=5)
+# Parameter labels and entries
+parameters = [
+    ("Wall Area in m² (Aw):", "0", "Aw_entry"),
+    ("Wall U-value in W/m²K (Uw):", "0", "Uw_entry"),
+    ("Roof Area in m² (Ar):", "0", "Ar_entry"),
+    ("Roof U-value in W/m²K (Ur):", "0", "Ur_entry"),
+    ("Set Point Temperature in K (T_sp):", "0", "T_sp_entry"),
+    ("Tank Surface Area in m² (A_tank):", "0", "A_tank_entry"),
+    ("Outside Temperature in °C (T_amb):", "0", "outside_temp_entry"),
+    ("Mass of Water in Hot Water Tank in kg:", "0", "mass_of_water_entry"),
+    ("Initial Tank Temperature in K:", "0", "initial_tank_temp_entry"),
+    ("Heat Pump On Threshold in K:", "0", "on_threshold_entry"),
+    ("Heat Pump Off Threshold in K:", "0", "off_threshold_entry"),
+]
 
-tk.Label(frame_params, text="Wall U-value in W/m²K (Uw):").grid(row=2, column=0, sticky='e')
-Uw_entry = ttk.Entry(frame_params)
-Uw_entry.insert(0, "0")  # Starting value
-Uw_entry.grid(row=2, column=1, pady=5, padx=5)
+# Dictionary to store entry widgets by name
+entries_dict = {}
 
-tk.Label(frame_params, text="Roof Area in m² (Ar):").grid(row=3, column=0, sticky='e')
-Ar_entry = ttk.Entry(frame_params)
-Ar_entry.insert(0, "0")  # Starting value
-Ar_entry.grid(row=3, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Roof U-value in W/m²K (Ur):").grid(row=4, column=0, sticky='e')
-Ur_entry = ttk.Entry(frame_params)
-Ur_entry.insert(0, "0")  # Starting value
-Ur_entry.grid(row=4, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Set Point Temperature in K (T_sp):").grid(row=5, column=0, sticky='e')
-T_sp_entry = ttk.Entry(frame_params)
-T_sp_entry.insert(0, "0")  # Starting value
-T_sp_entry.grid(row=5, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Tank Surface Area in m² (A_tank):").grid(row=6, column=0, sticky='e')
-A_tank_entry = ttk.Entry(frame_params)
-A_tank_entry.insert(0, "0")  # Starting value
-A_tank_entry.grid(row=6, column=1, pady=5, padx=5)
-
-# Create a new entry for displaying outside temperature
-outside_temp_label = tk.Label(frame_params, text="Outside Temperature in °C (T_amb):")
-outside_temp_label.grid(row=7, column=0, sticky='e')
-outside_temp_entry = tk.Entry(frame_params)
-outside_temp_entry.insert(0, "0")  # Default value
-outside_temp_entry.grid(row=7, column=1)
-
-tk.Label(frame_params, text="Mass of Water in Hot Water Tank in kg:").grid(row=8, column=0, sticky='e')
-mass_of_water_entry = ttk.Entry(frame_params)
-mass_of_water_entry.insert(0, "0")  # Starting value
-mass_of_water_entry.grid(row=8, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Initial Tank Temperature in K:").grid(row=9, column=0, sticky='e')
-initial_tank_temp_entry = ttk.Entry(frame_params)
-initial_tank_temp_entry.insert(0, "0")  # Starting value
-initial_tank_temp_entry.grid(row=9, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Heat Pump On Threshold in K:").grid(row=10, column=0, sticky='e')
-on_threshold_entry = ttk.Entry(frame_params)
-on_threshold_entry.insert(0, "0")  # Starting value
-on_threshold_entry.grid(row=10, column=1, pady=5, padx=5)
-
-tk.Label(frame_params, text="Heat Pump Off Threshold in K:").grid(row=11, column=0, sticky='e')
-off_threshold_entry = ttk.Entry(frame_params)
-off_threshold_entry.insert(0, "0")  # Starting value
-off_threshold_entry.grid(row=11, column=1, pady=5, padx=5)
+# Create labels and entries dynamically
+for i, (label_text, default_value, entry_name) in enumerate(parameters, start=1):
+    tk.Label(frame_params, text=label_text).grid(row=i, column=0, sticky='e')
+    entry = ttk.Entry(frame_params)
+    entry.insert(0, default_value)
+    entry.grid(row=i, column=1, pady=5, padx=5)
+    entries_dict[entry_name] = entry
 
 # Add the city selection dropdown
 tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
@@ -304,6 +267,19 @@ city_dropdown.grid(row=12, column=1, pady=5, padx=5)
 
 # Update temperature button
 tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
+
+# Access entry widgets using entries_dict['entry_name']
+Aw_entry = entries_dict['Aw_entry']
+Uw_entry = entries_dict['Uw_entry']
+Ar_entry = entries_dict['Ar_entry']
+Ur_entry = entries_dict['Ur_entry']
+T_sp_entry = entries_dict['T_sp_entry']
+A_tank_entry = entries_dict['A_tank_entry']
+outside_temp_entry = entries_dict['outside_temp_entry']
+mass_of_water_entry = entries_dict['mass_of_water_entry']
+initial_tank_temp_entry = entries_dict['initial_tank_temp_entry']
+on_threshold_entry = entries_dict['on_threshold_entry']
+off_threshold_entry = entries_dict['off_threshold_entry']
 
 # Automatically update parameters when city selection changes
 def on_house_selection_change(event):
