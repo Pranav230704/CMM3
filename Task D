@@ -1,13 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Oct  9 11:25:14 2024
-
-@author: Group 6
-
-This script simulates the operation of a heat pump system and hot water tank under different daily conditions.
-The code is designed to evaluate the effects of various parameters on tank temperature over a 24-hour period.
-Limitations: The hot water tank is treated as a single, uniform temperature reservoir, ignoring stratification effects.
-"""
+#This script simulates the operation of a heat pump system and hot water tank under different daily conditions.
+#The code is designed to evaluate the effects of various parameters on tank temperature over a 24-hour period.
+#Limitations: The hot water tank is treated as a single, uniform temperature reservoir, ignoring stratification effects.
 
 import numpy as np
 from datetime import datetime
