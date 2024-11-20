@@ -6,7 +6,7 @@ from datetime import datetime
 from meteostat import Point, Hourly
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-from Heat_system import run_heat_system_simulation
+from heat_system import run_heat_system_simulation
 
 # Define coordinates for additional cities
 cities = {
