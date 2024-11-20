@@ -227,8 +227,6 @@ def run_simulation(Aw, Uw, Ar, Ur, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, A_
     energy_label.config(text=f"Total Energy Consumption: {Q_hp_total / 3.6e6:.2f} kWh")
     avg_cop_label.config(text=f"Average COP: {avg_cop:.2f}")
 
-
-
 def create_user_manual():
     user_manual = """
     Heat Pump Simulation User Manual
@@ -293,14 +291,6 @@ def reset_fields():
     # Clear city selection and house type selection
     city_var.set("Please Select")
     house_var.set("Please Select")
-    
-    # Clear the plots
-    for widget in frame_temperature_plot.winfo_children():
-        if isinstance(widget, FigureCanvasTkAgg):
-            widget.get_tk_widget().destroy()
-    for widget in frame_performance_metrics.winfo_children():
-        if isinstance(widget, FigureCanvasTkAgg):
-            widget.get_tk_widget().destroy()
     
     # Reset performance metrics labels
     energy_label.config(text="Total Energy Consumption: ")
