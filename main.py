@@ -118,15 +118,6 @@ for i, (label_text, default_value, entry_name) in enumerate(parameters, start=1)
     entry.grid(row=i, column=1, pady=5, padx=5)
     entries_dict[entry_name] = entry
 
-# Add the city selection dropdown
-tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
-city_var = tk.StringVar(value="Please Select")  
-city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
-city_dropdown.grid(row=12, column=1, pady=5, padx=5)
-
-# Update temperature button
-tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
-
 # Access entry widgets using entries_dict['entry_name']
 Aw_entry = entries_dict['Aw_entry']
 Uw_entry = entries_dict['Uw_entry']
@@ -172,6 +163,12 @@ house_types = {
           'Heat Pump Off Threshold in K': 333.15,
           'Tank Surface Area in m² (A_tank)': 1, 'City': 'Edinburgh', 'Outside Temp': 0},
 }
+
+# Add the city selection dropdown
+tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=12, column=0, sticky='e')
+city_var = tk.StringVar(value="Please Select")  
+city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
+city_dropdown.grid(row=12, column=1, pady=5, padx=5)
 
 house_var = tk.StringVar(value='Please Select')
 house_dropdown = ttk.Combobox(frame_params, textvariable=house_var, values=list(house_types.keys()))
@@ -262,39 +259,32 @@ def create_user_manual():
 # Create and display the user manual
 create_user_manual()
 
-# Reset function to reset all input fields and remove plots
+# Function to reset all input fields to their default values
 def reset_fields():
     # Reset all input fields to zero
-    Aw_entry.delete(0, tk.END)
-    Aw_entry.insert(0, "0")
-    Uw_entry.delete(0, tk.END)
-    Uw_entry.insert(0, "0")
-    Ar_entry.delete(0, tk.END)
-    Ar_entry.insert(0, "0")
-    Ur_entry.delete(0, tk.END)
-    Ur_entry.insert(0, "0")
-    T_sp_entry.delete(0, tk.END)
-    T_sp_entry.insert(0, "0")
-    mass_of_water_entry.delete(0, tk.END)
-    mass_of_water_entry.insert(0, "0")
-    initial_tank_temp_entry.delete(0, tk.END)
-    initial_tank_temp_entry.insert(0, "0")
-    on_threshold_entry.delete(0, tk.END)
-    on_threshold_entry.insert(0, "0")
-    off_threshold_entry.delete(0, tk.END)
-    off_threshold_entry.insert(0, "0")
-    A_tank_entry.delete(0, tk.END)
-    A_tank_entry.insert(0, "0")
-    outside_temp_entry.delete(0, tk.END)
-    outside_temp_entry.insert(0, "0")
-    
-    # Clear city selection and house type selection
+    for entry_widget in entries_dict.values():
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, "0")
+
+    # Reset city and house selection
     city_var.set("Please Select")
     house_var.set("Please Select")
-    
+
+    # Clear the plots in the frames
+    for frame in [frame_temperature_plot, frame_performance_metrics]:
+        for widget in frame.winfo_children():
+            if isinstance(widget, FigureCanvasTkAgg):
+                widget.get_tk_widget().destroy()
+
     # Reset performance metrics labels
     energy_label.config(text="Total Energy Consumption: ")
     avg_cop_label.config(text="Average COP: ")
+
+# Add the city selection dropdown
+city_var = tk.StringVar(value="Please Select")
+tk.Label(frame_params, text="Select City for Outside Temperature:").grid(row=len(parameters) + 1, column=0, sticky='e')
+city_dropdown = ttk.Combobox(frame_params, textvariable=city_var, values=list(cities.keys()))
+city_dropdown.grid(row=len(parameters) + 1, column=1, pady=5, padx=5)
 
 # Function to update the temperature based on selected city
 def update_temperature_display(city_name):
@@ -309,6 +299,9 @@ def update_temperature_display(city_name):
     else:
         print(f"Failed to fetch temperature data for {city_name}.")
         return 0
+
+# Update temperature button
+tk.Button(frame_params, text="Update Temperature", command=update_temperature).grid(row=13, column=0, columnspan=2, pady=10)
 
 # Frame for running simulation
 frame_simulation = tk.Frame(root, bd=2, relief=tk.GROOVE)  # Added border for separation
