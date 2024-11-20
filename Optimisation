@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Oct  9 11:25:14 2024
 
-@author: Group 6
-"""
 import numpy as np
 import yaml
 from scipy.optimize import curve_fit, differential_evolution
