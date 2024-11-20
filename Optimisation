@@ -1,3 +1,11 @@
+# Capabilities and Limitations of this Code
+
+# Capabilities:
+# - Allows parameter optimization using differential evolution to minimize energy consumption.
+
+# Limitations:
+# - Performance evaluation is limited to energy consumption minimization.
+# - Runtime is long.
 
 import numpy as np
 import yaml
