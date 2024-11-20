@@ -115,7 +115,7 @@ def create_user_manual():
     House A: A well-insulated, smaller home.
     House B: A moderately insulated, medium-sized home.
     House C: A poorly-insulated, larger house.
-    YAML: The default building configuration.
+    House D: The default building configuration.
     
     The inputs will be automatically filled based on the selected building.
     
@@ -330,7 +330,7 @@ house_types = {
           'Heat Pump On Threshold in K': 313.15, 
           'Heat Pump Off Threshold in K': 333.15,
           'Tank Surface Area in m² (A_tank)': 1.2, 'City': 'Rio de Janeiro', 'Outside Temp': 0},
-    'YAML': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
+    'D': {'Aw': 132, 'Uw': 0.51, 'Ar': 120, 'Ur': 0.18, 'T_sp': 293.15,
           'Mass of Water in Hot Water Tank in kg': 200, 
           'Initial Tank Temperature in K': 318.15,
           'Heat Pump On Threshold in K': 313.15, 
