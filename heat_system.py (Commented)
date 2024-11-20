@@ -1,6 +1,15 @@
-# This file will include the heat system simulation class and functions.
+# Heat System Simulation Code
 
-# heat_system.py
+# Capabilities:
+# - Simulates the behavior of a heat pump system.
+# - Calculates heat load and tank temperature dynamics.
+# - Calculates Perfomance Metrics.
+# - Solves tank temperature using a differential equation model.
+
+# Limitations:
+# - Assumes a fixed heat pump condenser temperature.
+# - Does not fully account for real-world variables such as variable flow rates, weather conditions.
+
 import numpy as np
 import yaml
 from scipy.integrate import solve_ivp
@@ -103,6 +112,3 @@ def run_heat_system_simulation(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond,
     # initialize an instance of Heat_system with the specified parameters
     heat_system = Heat_system(Aw, Uw, Ar, Ur, T_amb_list, T_sp, U_cond, T_cond, U_tank, A_tank, c_t, A_cond)
     return heat_system.solve_tank_temperature(initial_tank_temp)  # solve the tank temperature and return results
-
-
-
