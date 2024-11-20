@@ -71,8 +71,8 @@ class Heat_system:
 
     def tank_temperature_ode(self, t, T_tank):
         # ordinary differential equation for tank temperature dynamics
-        T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # interpolate ambient temperature over time
-        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())  # interpolate load over time
+        T_amb = np.interp(t, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # interpolate ambient temperature over time in seconds to fit the index
+        Load = np.interp(t, np.linspace(0, 86400, len(self.Q_load())), self.Q_load())  # interpolate load over time in seconds to fit the index
         Q_hp = self.Q_hp(T_tank, T_amb)  # calculate heat pump output
         Q_loss = self.U_tank * self.A_tank * (T_tank - T_amb)  # heat loss from tank to environment
 
@@ -82,7 +82,7 @@ class Heat_system:
     def solve_tank_temperature(self, initial_tank_temp, total_time=86400, time_points=1000):
         # solve the ODE for tank temperature over a 24-hour period
         t_eval = np.linspace(0, total_time, time_points)  # define evaluation points for time
-        T_amb_interpolated = np.interp(t_eval, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # interpolate ambient temperatures
+        T_amb_interpolated = np.interp(t_eval, np.linspace(0, 86400, len(self.T_amb_list)), self.T_amb_list)  # interpolate ambient temperatures in seconds to fit the index
 
         solution = solve_ivp(self.tank_temperature_ode, [0, total_time], [initial_tank_temp], t_eval=t_eval, method="RK45", max_step=100)  # solve ODE using Runge-Kutta method
         self.cop_values = [self.cop(T_amb, self.a, self.b) for T_amb in T_amb_interpolated]  # calculate COP values over time
