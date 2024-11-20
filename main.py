@@ -1,4 +1,5 @@
-# main.py
+# This file will include the UI and calls in the heat_system.py code to perofrm the calculation behind the code
+
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
