@@ -16,7 +16,7 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import curve_fit
 
 # Load COP data from YAML file
-file_path1 = r'/Users/pranav/Downloads/heat_pump_cop_synthetic_full.yaml' # this is an example filepath, please change it accordingly
+file_path1 = r'/example/filepath/group6/heat_pump_cop_synthetic_full.yaml' # this is an example filepath, please change it accordingly
 with open(file_path1, 'r') as file:
     cop_yaml = yaml.safe_load(file)
 
